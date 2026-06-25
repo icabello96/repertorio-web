@@ -37,12 +37,22 @@ async def home():
 async def procesar(lista: UploadFile = File(...), nombre_salida: str = Form(...)):
     try:
         # ✅ Descargar PDF base
-        pdf_response = requests.get(PDF_URL, timeout=30)
-        pdf_response.raise_for_status()
+       session = requests.Session()
+response = session.get(PDF_URL, timeout=30)
 
-        # ✅ Validar que es PDF real
-        if "application/pdf" not in pdf_response.headers.get("Content-Type", ""):
-            return "<h2>Error: la URL no devuelve un PDF válido</h2>"
+# Google Drive a veces pide confirmación
+for key, value in response.cookies.items():
+    if key.startswith("download_warning"):
+        params = {"id": "1GGv_629FDOYmcQ8sBJt5eOgu80Ow0xb1", "confirm": value}
+        response = session.get("https://drive.google.com/uc?export=download", params=params)
+        break
+
+pdf_response = response
+
+# Validación mínima: comprobar cabecera PDF
+if not pdf_response.content.startswith(b"%PDF"):
+    return "<h2>Error: Google Drive no ha servido un PDF válido</h2>"
+``
 
         # ✅ Guardar PDF temporal
         pdf_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
