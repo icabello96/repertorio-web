@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form
+from fastapi import FastAPI, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse
 import tempfile
 import requests
@@ -6,16 +6,15 @@ import os
 import subprocess
 import base64
 import re
-from fastapi import Request
 
 app = FastAPI()
 
-# ✅ PDF base
+# PDF base
 PDF_URL = "https://drive.google.com/uc?export=download&id=1GGv_629FDOYmcQ8sBJt5eOgu80Ow0xb1"
 
-# ✅ Spotify credentials
-CLIENT_ID = "44e17b3c6b82461eb93803229c06231a"
-CLIENT_SECRET = "a8e8214a20f344c2980b5d71ee2888e2"
+# Spotify credentials (pon aquí los tuyos)
+CLIENT_ID = "TU_CLIENT_ID"
+CLIENT_SECRET = "TU_CLIENT_SECRET"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -23,7 +22,8 @@ async def home():
     return """
     <html>
     <body>
-    <img src="https://losperrostratos.es/wp-content/uploads/2025/11/neontr.png" width="150"/>
+
+    <img src="https://losperrostratos.es/wp-content/uploads/2025/11/neontr.png" width="150">
     <h1>Generador de repertorios</h1>
 
     <label>URL de playlist Spotify</label><br>
@@ -40,6 +40,7 @@ async def home():
         <input type="text" name="nombre_salida" required><br><br>
 
         <button type="submit">Generar PDF</button>
+
     </form>
 
     <script>
@@ -53,7 +54,6 @@ async def home():
         });
 
         const text = await res.text();
-
         document.getElementsByName("repertorio_texto")[0].value = text;
     }
     </script>
@@ -66,7 +66,6 @@ async def home():
 @app.post("/procesar/")
 async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(...)):
 
-    # ✅ Descargar PDF base
     pdf_response = requests.get(PDF_URL, timeout=30)
     pdf_response.raise_for_status()
 
@@ -74,18 +73,15 @@ async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(
     pdf_temp.write(pdf_response.content)
     pdf_temp.close()
 
-    # ✅ Crear archivo temporal con canciones
     lista_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
     lista_temp.write(repertorio_texto.encode("utf-8"))
     lista_temp.close()
 
-    # ✅ Nombre salida
     if not nombre_salida.endswith(".pdf"):
         nombre_salida += ".pdf"
 
     salida_path = os.path.join(tempfile.gettempdir(), nombre_salida)
 
-    # ✅ Ejecutar script
     resultado = subprocess.run(
         [
             "python3",
@@ -104,9 +100,9 @@ async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(
     return FileResponse(salida_path, filename=nombre_salida)
 
 
-# ✅ NUEVO: endpoint Spotify
 @app.post("/spotify")
 async def spotify_playlist(req: Request):
+
     data = await req.json()
     url = data.get("url")
 
@@ -116,7 +112,6 @@ async def spotify_playlist(req: Request):
 
     playlist_id = match.group(1)
 
-    # Obtener token
     auth = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
 
     token_res = requests.post(
@@ -127,7 +122,6 @@ async def spotify_playlist(req: Request):
 
     token = token_res.json().get("access_token")
 
-    # Obtener canciones
     tracks_res = requests.get(
         f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks",
         headers={"Authorization": f"Bearer {token}"}
@@ -140,10 +134,8 @@ async def spotify_playlist(req: Request):
         try:
             track = item["track"]
             nombre = track["name"]
-            artista = track["artists"][0]["name"]
-            canciones.append(f"{nombre} - {artista}")
+            canciones.append(nombre)  # ✅ SOLO NOMBRE
         except:
             pass
 
     return "\n".join(canciones)
-``
