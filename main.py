@@ -1,20 +1,35 @@
 from fastapi import FastAPI, UploadFile, Form, File
 from fastapi.responses import FileResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.requests import Request
 import tempfile
 import requests
 import os
 import subprocess
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
 
 PDF_URL = "https://rebrand.ly/entero"
 
+
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+async def home():
+    return """
+    <html>
+    <body>
+        <h1>🎵 Generador de repertorio</h1>
+
+        <form action="/procesar/" method="post" enctype="multipart/form-data">
+            <label>Subir repertorio.txt</label><br>
+            <input type="file" name="lista" required><br><br>
+
+            <label>Nombre del PDF de salida</label><br>
+            <input type="text" name="nombre_salida" required><br><br>
+
+            <button type="submit">Generar PDF</button>
+        </form>
+
+    </body>
+    </html>
+    """
 
 
 @app.post("/procesar/")
@@ -22,24 +37,26 @@ async def procesar(
     lista: UploadFile = File(...),
     nombre_salida: str = Form(...)
 ):
-    # ---------- 1. Descargar el PDF ENTEROOOO ----------
-    pdf_response = requests.get(PDF_URL)
+    # Descargar PDF base
+    pdf_response = requests.get(PDF_URL, timeout=30)
+    pdf_response.raise_for_status()
+
     pdf_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     pdf_temp.write(pdf_response.content)
     pdf_temp.close()
 
-    # ---------- 2. Guardar repertorio.txt ----------
+    # Guardar repertorio.txt
     lista_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
     lista_temp.write(await lista.read())
     lista_temp.close()
 
-    # ---------- 3. Nombre de salida ----------
+    # Nombre salida
     if not nombre_salida.endswith(".pdf"):
         nombre_salida += ".pdf"
 
     salida_path = os.path.join(tempfile.gettempdir(), nombre_salida)
 
-    # ---------- 4. Ejecutar tu script ----------
+    # Ejecutar script
     subprocess.run([
         "python3",
         "extraer_repertorio.py",
@@ -48,9 +65,4 @@ async def procesar(
         salida_path
     ])
 
-    # ---------- 5. Devolver PDF ----------
-    return FileResponse(
-        salida_path,
-        media_type="application/pdf",
-        filename=nombre_salida
-    )
+    return FileResponse(salida_path, filename=nombre_salida)
