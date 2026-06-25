@@ -117,39 +117,39 @@ async def spotify_playlist(req: Request):
 
     canciones = []
 
-for linea in raw:
-    linea = linea.strip()
+    for linea in raw:
+        linea = linea.strip()
 
-    # ❌ filtros de basura
-    if (
-        not linea
-        or len(linea) < 3
-        or "Spotify" in linea
-        or "Search" in linea
-        or "Library" in linea
-        or "Premium" in linea
-        or "Play" in linea
-        or "Cookie" in linea
-        or "hr" in linea
-        or "min" in linea
-    ):
-        continue
+        # ❌ FILTRO BASURA
+        if (
+            not linea
+            or len(linea) < 3
+            or "Spotify" in linea
+            or "Search" in linea
+            or "Library" in linea
+            or "Premium" in linea
+            or "Play" in linea
+            or "Cookie" in linea
+            or "hr" in linea
+            or "min" in linea
+        ):
+            continue
 
-    # ✅ limpiar paréntesis
-    linea = re.sub(r"\(.*?\)", "", linea)
+        # ✅ LIMPIAR PARÉNTESIS
+        linea = re.sub(r"\(.*?\)", "", linea)
 
-    # ✅ limpiar sufijos tipo " - directo"
-    linea = linea.split(" - ")[0]
+        # ✅ CORTAR SUFIJO
+        linea = linea.split(" - ")[0]
 
-    linea = linea.strip()
+        linea = linea.strip()
 
-    if linea:
-        canciones.append(linea)
+        if linea:
+            canciones.append(linea)
 
-# ✅ QUEDARSE SOLO CON LAS LÍNEAS IMPARES (canciones)
-canciones_final = canciones[::2]
+    # ✅ QUEDARSE SOLO CON CANCIONES (no artistas)
+    canciones = canciones[::2]
 
-# ✅ quitar duplicados manteniendo orden
-canciones_final = list(dict.fromkeys(canciones_final))
+    # ✅ ELIMINAR DUPLICADOS
+    canciones = list(dict.fromkeys(canciones))
 
-return "\n".join(canciones_final)
+    return "\n".join(canciones)
