@@ -153,4 +153,3 @@ async def spotify_playlist(req: Request):
             pass
 
     return "\n".join(canciones)
-``
