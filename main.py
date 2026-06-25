@@ -103,33 +103,68 @@ async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(
 @app.post("/spotify")
 async def spotify_playlist(req: Request):
 
-    data = await req.json()
-    url = data.get("url")
+    # ✅ comprobar credenciales
+    if not CLIENT_ID or not CLIENT_SECRET:
+        return "Error: credenciales Spotify no configuradas"
 
+    data = await req.json()
+    url = data.get("url", "")
+
+    # ✅ extraer ID playlist
     match = re.search(r"playlist/([a-zA-Z0-9]+)", url)
     if not match:
         return "URL inválida"
 
     playlist_id = match.group(1)
 
-    # ✅ Endpoint público (NO requiere token)
-    res = requests.get(
-        f"https://open.spotify.com/oembed?url=https://open.spotify.com/playlist/{playlist_id}"
+    # ✅ obtener token
+    auth = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
+
+    token_res = requests.post(
+        "https://accounts.spotify.com/api/token",
+        headers={"Authorization": f"Basic {auth}"},
+        data={"grant_type": "client_credentials"}
     )
 
-    if res.status_code != 200:
-        return "No se ha podido acceder a la playlist"
+    token_data = token_res.json()
+    token = token_data.get("access_token")
 
-    # 🔴 fallback → parseo HTML
-    html = requests.get(f"https://open.spotify.com/playlist/{playlist_id}").text
+    if not token:
+        return str(token_data)
 
-    canciones = re.findall(r'<span.*?>(.*?)</span>', html)
+    # ✅ obtener canciones
+    tracks_res = requests.get(
+        f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks",
+        headers={"Authorization": f"Bearer {token}"},
+        params={"limit": 100}
+    )
 
-    # Limpieza básica
-    canciones_limpias = []
-    for c in canciones:
-        c = c.strip()
-        if len(c) > 0 and len(c) < 80:
-            canciones_limpias.append(c)
+    data = tracks_res.json()
 
-    return "\n".join(canciones_limpias[:100])
+    if "items" not in data:
+        return str(data)
+
+    canciones = []
+
+    for item in data["items"]:
+        track = item.get("track")
+        if not track:
+            continue
+
+        nombre = track.get("name", "")
+
+        # ✅ LIMPIEZA: quitar paréntesis (feat, remastered, live...)
+        nombre = re.sub(r"\(.*?\)", "", nombre)
+
+        # ✅ quitar texto después de "-"
+        nombre = nombre.split(" - ")[0]
+
+        nombre = nombre.strip()
+
+        if len(nombre) > 1:
+            canciones.append(nombre)
+
+    # ✅ eliminar duplicados manteniendo orden
+    canciones = list(dict.fromkeys(canciones))
+
+    return "\n".join(canciones)
