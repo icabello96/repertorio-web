@@ -13,9 +13,8 @@ app = FastAPI()
 PDF_URL = "https://drive.google.com/uc?export=download&id=1GGv_629FDOYmcQ8sBJt5eOgu80Ow0xb1"
 
 # Variables de entorno (Render)
-CLIENT_ID = os.getenv("44e17b3c6b82461eb93803229c06231a")
-CLIENT_SECRET = os.getenv("a8e8214a20f344c2980b5d71ee2888e2")
-
+CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
