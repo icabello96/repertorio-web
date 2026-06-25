@@ -57,12 +57,21 @@ async def procesar(
     salida_path = os.path.join(tempfile.gettempdir(), nombre_salida)
 
     # Ejecutar script
-    subprocess.run([
+   resultado = subprocess.run(
+    [
         "python3",
         "extraer_repertorio.py",
         pdf_temp.name,
         lista_temp.name,
         salida_path
-    ])
+    ],
+    capture_output=True,
+    text=True
+)
 
+if resultado.returncode != 0:
+    return f"""
+    <h2>Error ejecutando el script</h2>
+    <pre>{resultado.stderr}</pre>
+    """
     return FileResponse(salida_path, filename=nombre_salida)
