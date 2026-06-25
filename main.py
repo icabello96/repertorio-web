@@ -18,9 +18,10 @@ async def home():
     <body>
         <h1>🎵 Generador de repertorio</h1>
 
-        <form action="/procesar/" method="post" enctype="multipart/form-data">
-            <label>Subir repertorio.txt</label><br>
-            <input type="file" name="lista" required><br><br>
+        <form action="/procesar/" method="post">
+            
+            <label>Pega aquí el repertorio (una canción por línea)</label><br>
+            <textarea name="repertorio_texto" rows="15" cols="50" required></textarea><br><br>
 
             <label>Nombre del PDF de salida</label><br>
             <input type="text" name="nombre_salida" required><br><br>
@@ -32,23 +33,20 @@ async def home():
     </html>
     """
 
-
 @app.post("/procesar/")
-async def procesar(lista: UploadFile = File(...), nombre_salida: str = Form(...)):
-    
-    # ✅ Descargar PDF
+async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(...)):
+
+    # ✅ Descargar PDF base
     pdf_response = requests.get(PDF_URL, timeout=30)
     pdf_response.raise_for_status()
 
-    # ✅ Guardar PDF temporal
     pdf_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     pdf_temp.write(pdf_response.content)
     pdf_temp.close()
 
-    # ✅ Guardar repertorio.txt
-    lista_bytes = await lista.read()
+    # ✅ Crear "repertorio.txt" a partir del texto pegado
     lista_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
-    lista_temp.write(lista_bytes)
+    lista_temp.write(repertorio_texto.encode("utf-8"))
     lista_temp.close()
 
     # ✅ Nombre salida
