@@ -131,9 +131,9 @@ async def spotify_playlist(req: Request):
 
     # 🎧 Obtener playlist completa
     playlist_res = requests.get(
-        f"https://api.spotify.com/v1/playlists/{playlist_id}",
-        headers={"Authorization": f"Bearer {token}"}
-    )
+    f"https://api.spotify.com/v1/playlists/{playlist_id}?fields=tracks.items(track(name))",
+    headers={"Authorization": f"Bearer {token}"}
+)
 
     data = playlist_res.json()
 
