@@ -102,7 +102,7 @@ async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(
 async def spotify_playlist(req: Request):
 
     data = await req.json()
-    url = data.get("url")
+    url = data.get("url", "")
 
     match = re.search(r"playlist/([a-zA-Z0-9]+)", url)
     if not match:
@@ -110,24 +110,42 @@ async def spotify_playlist(req: Request):
 
     playlist_id = match.group(1)
 
-    # ✅ Endpoint público (NO requiere token)
-    res = requests.get(
-        f"https://open.spotify.com/oembed?url=https://open.spotify.com/playlist/{playlist_id}"
-    )
-
-    if res.status_code != 200:
-        return "No se ha podido acceder a la playlist"
-
-    # 🔴 fallback → parseo HTML
     html = requests.get(f"https://open.spotify.com/playlist/{playlist_id}").text
 
-    canciones = re.findall(r'<span.*?>(.*?)</span>', html)
+    # ✅ EXTRAER TEXTO
+    raw = re.findall(r'>([^<>]{2,80})<', html)
 
-    # Limpieza básica
-    canciones_limpias = []
-    for c in canciones:
-        c = c.strip()
-        if len(c) > 0 and len(c) < 80:
-            canciones_limpias.append(c)
+    canciones = []
 
-    return "\n".join(canciones_limpias[:100])
+    for linea in raw:
+        linea = linea.strip()
+
+        # ❌ FILTROS DE BASURA
+        if (
+            not linea
+            or len(linea) < 3
+            or "Spotify" in linea
+            or "Search" in linea
+            or "Library" in linea
+            or "Premium" in linea
+            or "Play" in linea
+            or "Cookie" in linea
+            or "hr" in linea
+            or "min" in linea
+        ):
+            continue
+
+        # ✅ LIMPIAR PARÉNTESIS (feat, remastered, live…)
+        linea = re.sub(r"\(.*?\)", "", linea)
+
+        # ✅ CORTAR DESPUÉS DE "-"
+        linea = linea.split(" - ")[0]
+
+        # ✅ LIMPIEZA FINAL
+        linea = linea.strip()
+
+        # ✅ EVITAR DUPLICADOS
+        if linea and linea not in canciones:
+            canciones.append(linea)
+
+    return "\n".join(canciones[:100])
