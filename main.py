@@ -7,7 +7,9 @@ import subprocess
 
 app = FastAPI()
 
+# ✅ IMPORTANTE: enlace directo al PDF
 PDF_URL = "https://drive.google.com/uc?export=download&id=1GGv_629FDOYmcQ8sBJt5eOgu80Ow0xb1"
+
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
@@ -32,46 +34,52 @@ async def home():
 
 
 @app.post("/procesar/")
-async def procesar(
-    lista: UploadFile = File(...),
-    nombre_salida: str = Form(...)
-):
-    # Descargar PDF base
-    pdf_response = requests.get(PDF_URL, timeout=30)
-    pdf_response.raise_for_status()
+async def procesar(lista: UploadFile = File(...), nombre_salida: str = Form(...)):
+    try:
+        # ✅ Descargar PDF base
+        pdf_response = requests.get(PDF_URL, timeout=30)
+        pdf_response.raise_for_status()
 
-    pdf_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    pdf_temp.write(pdf_response.content)
-    pdf_temp.close()
+        # ✅ Validar que es PDF real
+        if "application/pdf" not in pdf_response.headers.get("Content-Type", ""):
+            return "<h2>Error: la URL no devuelve un PDF válido</h2>"
 
-if "application/pdf" not in pdf_response.headers.get("Content-Type", ""):
-    return "<h2>Error: la URL no devuelve un PDF válido</h2>"
-    
-    # Guardar repertorio.txt
-    lista_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
-    lista_temp.write(await lista.read())
-    lista_temp.close()
+        # ✅ Guardar PDF temporal
+        pdf_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+        pdf_temp.write(pdf_response.content)
+        pdf_temp.close()
 
-    # Nombre salida
-    if not nombre_salida.endswith(".pdf"):
-        nombre_salida += ".pdf"
+        # ✅ Leer archivo subido
+        lista_bytes = await lista.read()
+        lista_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
+        lista_temp.write(lista_bytes)
+        lista_temp.close()
 
-    salida_path = os.path.join(tempfile.gettempdir(), nombre_salida)
+        # ✅ Nombre archivo salida
+        if not nombre_salida.endswith(".pdf"):
+            nombre_salida += ".pdf"
 
-    # Ejecutar script
-    resultado = subprocess.run(
-        [
-            "python3",
-            "extraer_repertorio.py",
-            pdf_temp.name,
-            lista_temp.name,
-            salida_path
-        ],
-        capture_output=True,
-        text=True
-    )
+        salida_path = os.path.join(tempfile.gettempdir(), nombre_salida)
 
-    if resultado.returncode != 0:
-        return f"<pre>{resultado.stderr}</pre>"
+        # ✅ Ejecutar script
+        resultado = subprocess.run(
+            [
+                "python3",
+                "extraer_repertorio.py",
+                pdf_temp.name,
+                lista_temp.name,
+                salida_path
+            ],
+            capture_output=True,
+            text=True
+        )
 
-    return FileResponse(salida_path, filename=nombre_salida)
+        # ✅ Si falla, mostrar error
+        if resultado.returncode != 0:
+            return f"<pre>{resultado.stderr}</pre>"
+
+        # ✅ Devolver PDF generado
+        return FileResponse(salida_path, filename=nombre_salida)
+
+    except Exception as e:
+        return f"<pre>{str(e)}</pre>"
