@@ -114,7 +114,7 @@ async def spotify_playlist(req: Request):
 
     playlist_id = match.group(1)
 
-    # Obtener token
+    # 🔐 Obtener token
     auth = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
 
     token_res = requests.post(
@@ -129,7 +129,7 @@ async def spotify_playlist(req: Request):
     if not token:
         return str(token_data)
 
-    # Obtener playlist completa
+    # 🎧 Obtener playlist completa
     playlist_res = requests.get(
         f"https://api.spotify.com/v1/playlists/{playlist_id}",
         headers={"Authorization": f"Bearer {token}"}
@@ -137,22 +137,17 @@ async def spotify_playlist(req: Request):
 
     data = playlist_res.json()
 
+    tracks_data = data.get("tracks")
+    if not tracks_data or "items" not in tracks_data:
+        return str(data)
 
-tracks_data = data.get("tracks")
+    tracks = tracks_data["items"]
 
-if not tracks_data or "items" not in tracks_data:
-    return str(data)
-
-tracks = tracks_data["items"]
-
-
+    # ✅ EXTRAER SOLO NOMBRE
     canciones = []
     for item in tracks:
-        try:
-            track = item["track"]
-            nombre = track["name"]
-            canciones.append(nombre)
-        except:
-            pass
+        track = item.get("track")
+        if track and track.get("name"):
+            canciones.append(track["name"])
 
     return "\n".join(canciones)
