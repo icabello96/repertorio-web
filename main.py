@@ -16,9 +16,9 @@ async def home():
     return """
     <html>
     <body>
-<h1 style="text-align: center;">Generador de repertorios</h1>
-<p><img style="display: block; margin-left: auto; margin-right: auto;" src="https://losperrostratos.es/wp-content/uploads/2025/11/neontr.png" alt="" width="150" /></p>
-        <form action="/procesar/" method="post">
+<img src="https://losperrostratos.es/wp-content/uploads/2025/11/neontr.png" alt="" width="150" />
+<h1 style="text-align: left;">Generador de repertorios</h1>
+<form action="/procesar/" method="post">
             
             <label>Pega aquí el repertorio (una canción por línea)</label><br>
             <textarea name="repertorio_texto" rows="15" cols="50" required></textarea><br><br>
