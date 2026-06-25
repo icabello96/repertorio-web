@@ -12,9 +12,9 @@ app = FastAPI()
 # PDF base
 PDF_URL = "https://drive.google.com/uc?export=download&id=1GGv_629FDOYmcQ8sBJt5eOgu80Ow0xb1"
 
-# Spotify credentials (pon aquí los tuyos)
-CLIENT_ID = "44e17b3c6b82461eb93803229c06231a"
-CLIENT_SECRET = "a8e8214a20f344c2980b5d71ee2888e2"
+# Variables de entorno (Render)
+CLIENT_ID = os.getenv("44e17b3c6b82461eb93803229c06231a")
+CLIENT_SECRET = os.getenv("a8e8214a20f344c2980b5d71ee2888e2")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -32,7 +32,7 @@ async def home():
     <button type="button" onclick="procesarPlaylist()">Procesar playlist</button><br><br>
 
     <form action="/procesar/" method="post">
-        
+
         <label>Pega aquí el repertorio (una canción por línea)</label><br>
         <textarea name="repertorio_texto" rows="15" style="width:100%" required></textarea><br><br>
 
@@ -103,6 +103,9 @@ async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(
 @app.post("/spotify")
 async def spotify_playlist(req: Request):
 
+    if not CLIENT_ID or not CLIENT_SECRET:
+        return "Error: credenciales Spotify no configuradas"
+
     data = await req.json()
     url = data.get("url")
 
@@ -112,6 +115,7 @@ async def spotify_playlist(req: Request):
 
     playlist_id = match.group(1)
 
+    # Obtener token
     auth = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
 
     token_res = requests.post(
@@ -120,27 +124,33 @@ async def spotify_playlist(req: Request):
         data={"grant_type": "client_credentials"}
     )
 
-    token = token_res.json().get("access_token")
+    token_data = token_res.json()
+    token = token_data.get("access_token")
 
+    if not token:
+        return str(token_data)
+
+    # Obtener playlist completa
     playlist_res = requests.get(
-    f"https://api.spotify.com/v1/playlists/{playlist_id}",
-    headers={"Authorization": f"Bearer {token}"}
-)
+        f"https://api.spotify.com/v1/playlists/{playlist_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
 
-data = playlist_res.json()
+    data = playlist_res.json()
 
-if "tracks" not in data:
-    return str(data)
+    if "tracks" not in data:
+        return str(data)
 
-tracks = data["tracks"]["items"]
+    tracks = data["tracks"]["items"]
 
-canciones = []
-for item in tracks:
-    try:
-        track = item["track"]
-        nombre = track["name"]
-        canciones.append(nombre)
-    except:
-        pass
+    canciones = []
+    for item in tracks:
+        try:
+            track = item["track"]
+            nombre = track["name"]
+            canciones.append(nombre)
+        except:
+            pass
 
     return "\n".join(canciones)
+``
