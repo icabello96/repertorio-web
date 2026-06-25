@@ -38,3 +38,38 @@ async def procesar(
     nombre_salida: str = Form(...)
 ):
     # Descargar PDF base
+    pdf_response = requests.get(PDF_URL, timeout=30)
+    pdf_response.raise_for_status()
+
+    pdf_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    pdf_temp.write(pdf_response.content)
+    pdf_temp.close()
+
+    # Guardar repertorio.txt
+    lista_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
+    lista_temp.write(await lista.read())
+    lista_temp.close()
+
+    # Nombre salida
+    if not nombre_salida.endswith(".pdf"):
+        nombre_salida += ".pdf"
+
+    salida_path = os.path.join(tempfile.gettempdir(), nombre_salida)
+
+    # Ejecutar script
+    resultado = subprocess.run(
+        [
+            "python3",
+            "extraer_repertorio.py",
+            pdf_temp.name,
+            lista_temp.name,
+            salida_path
+        ],
+        capture_output=True,
+        text=True
+    )
+
+    if resultado.returncode != 0:
+        return f"<pre>{resultado.stderr}</pre>"
+
+    return FileResponse(salida_path, filename=nombre_salida)
