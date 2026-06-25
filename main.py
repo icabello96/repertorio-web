@@ -137,10 +137,14 @@ async def spotify_playlist(req: Request):
 
     data = playlist_res.json()
 
-    if "tracks" not in data:
-        return str(data)
 
-    tracks = data["tracks"]["items"]
+tracks_data = data.get("tracks")
+
+if not tracks_data or "items" not in tracks_data:
+    return str(data)
+
+tracks = tracks_data["items"]
+
 
     canciones = []
     for item in tracks:
