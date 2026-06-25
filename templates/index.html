@@ -3,38 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <title>Generador de Repertorio</title>
-    <style>
-        body {
-            font-family: Arial;
-            max-width: 500px;
-            margin: 40px auto;
-        }
-        h1 {
-            text-align: center;
-        }
-        input, button {
-            width: 100%;
-            margin-top: 10px;
-            padding: 10px;
-        }
-        button {
-            background-color: #0078D4;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-    </style>
 </head>
 <body>
 
-<h1 style="text-align: center;">Generador de repertorios</h1>
-<p><img style="display: block; margin-left: auto; margin-right: auto;" src="https://losperrostratos.es/wp-content/uploads/2025/11/neontr.png" alt="" width="120"/></p>
+<h1>Generador de repertorio</h1>
+
 <form action="/procesar/" method="post" enctype="multipart/form-data">
-    <label>1. Subir repertorio.txt</label>
+    <label>Subir repertorio.txt</label>
     <input type="file" name="lista" required>
 
-    <label>2. Nombrar el archivo (nombre del evento o de los novios)</label>
-    <input type="text" name="nombre_salida" placeholder="Marta y Luis.pdf" required>
+    <label>Nombre del PDF de salida</label>
+    <input type="text" name="nombre_salida" required>
 
     <button type="submit">Generar PDF</button>
 </form>
