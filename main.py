@@ -99,6 +99,7 @@ async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(
     return FileResponse(salida_path, filename=nombre_salida)
 
 
+
 @app.post("/spotify")
 async def spotify_playlist(req: Request):
 
@@ -114,7 +115,7 @@ async def spotify_playlist(req: Request):
 
     playlist_id = match.group(1)
 
-    # Obtener token
+    # ✅ TOKEN
     auth = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
 
     token_res = requests.post(
@@ -129,22 +130,23 @@ async def spotify_playlist(req: Request):
     if not token:
         return str(token_data)
 
-    # ✅ PEDIMOS SOLO LOS TRACKS
-    playlist_res = requests.get(
-        f"https://api.spotify.com/v1/playlists/{playlist_id}?fields=tracks.items(track(name))",
-        headers={"Authorization": f"Bearer {token}"}
+    # ✅ TRACKS (endpoint correcto)
+    tracks_res = requests.get(
+        f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks",
+        headers={"Authorization": f"Bearer {token}"},
+        params={"limit": 100}
     )
 
-    data = playlist_res.json()
+    tracks_data = tracks_res.json()
 
-    tracks = data.get("tracks", {}).get("items", [])
+    if "items" not in tracks_data:
+        return str(tracks_data)
 
     canciones = []
-    for item in tracks:
-        try:
-            nombre = item["track"]["name"]
-            canciones.append(nombre)
-        except:
-            pass
+
+    for item in tracks_data["items"]:
+        track = item.get("track")
+        if track and track.get("name"):
+            canciones.append(track["name"])
 
     return "\n".join(canciones)
