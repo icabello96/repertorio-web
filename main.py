@@ -127,19 +127,20 @@ async def spotify_playlist(req: Request):
         headers={"Authorization": f"Bearer {token}"}
     )
 
-data = tracks_res.json()
+    data = tracks_res.json()
 
-if "items" not in data:
-    return str(data)  # 👈 para ver error real
+    # ✅ DEBUG (por si falla)
+    if "items" not in data:
+        return str(data)
 
-tracks = data.get("items", [])
+    tracks = data["items"]
 
     canciones = []
     for item in tracks:
         try:
             track = item["track"]
             nombre = track["name"]
-            canciones.append(nombre)  # ✅ SOLO NOMBRE
+            canciones.append(nombre)  # SOLO NOMBRE
         except:
             pass
 
