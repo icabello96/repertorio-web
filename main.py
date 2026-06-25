@@ -14,8 +14,8 @@ app = FastAPI()
 PDF_URL = "https://drive.google.com/uc?export=download&id=1GGv_629FDOYmcQ8sBJt5eOgu80Ow0xb1"
 
 # ✅ Spotify credentials
-CLIENT_ID = "TU_CLIENT_ID"
-CLIENT_SECRET = "TU_CLIENT_SECRET"
+CLIENT_ID = "44e17b3c6b82461eb93803229c06231a"
+CLIENT_SECRET = "a8e8214a20f344c2980b5d71ee2888e2"
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -117,7 +117,7 @@ async def spotify_playlist(req: Request):
     playlist_id = match.group(1)
 
     # Obtener token
-    auth = base64.b64encode(f"{44e17b3c6b82461eb93803229c06231a}:{a8e8214a20f344c2980b5d71ee2888e2}".encode()).decode()
+    auth = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
 
     token_res = requests.post(
         "https://accounts.spotify.com/api/token",
