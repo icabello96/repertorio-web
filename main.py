@@ -123,7 +123,7 @@ async def spotify_playlist(req: Request):
     token = token_res.json().get("access_token")
 
     tracks_res = requests.get(
-    f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?market=ES",
+    f"https://api.spotify.com/v1/playlists/{playlist_id}",
     headers={"Authorization": f"Bearer {token}"}
 )
 
