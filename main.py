@@ -7,8 +7,7 @@ import subprocess
 
 app = FastAPI()
 
-PDF_URL = "https://rebrand.ly/entero"
-
+PDF_URL = "https://drive.google.com/uc?export=download&id=1GGv_629FDOYmcQ8sBJt5eOgu80Ow0xb1"
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
@@ -45,6 +44,9 @@ async def procesar(
     pdf_temp.write(pdf_response.content)
     pdf_temp.close()
 
+if "application/pdf" not in pdf_response.headers.get("Content-Type", ""):
+    return "<h2>Error: la URL no devuelve un PDF válido</h2>"
+    
     # Guardar repertorio.txt
     lista_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
     lista_temp.write(await lista.read())
