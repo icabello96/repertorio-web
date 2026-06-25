@@ -3,19 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <title>Generador de Repertorio</title>
+    <style>
+        body {
+            font-family: Arial;
+            max-width: 500px;
+            margin: 40px auto;
+        }
+        h1 {
+            text-align: center;
+        }
+        input, button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+        }
+        button {
+            background-color: #0078D4;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
 
-<h1>Generador de repertorio</h1>
+<h1>🎵 Generador de repertorio</h1>
 
 <form action="/procesar/" method="post" enctype="multipart/form-data">
+
     <label>Subir repertorio.txt</label>
     <input type="file" name="lista" required>
 
     <label>Nombre del PDF de salida</label>
-    <input type="text" name="nombre_salida" required>
+    <input type="text" name="nombre_salida" placeholder="repertorio_boda.pdf" required>
 
     <button type="submit">Generar PDF</button>
+
 </form>
 
 </body>
