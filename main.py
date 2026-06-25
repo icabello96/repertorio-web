@@ -129,4 +129,5 @@ async def spotify_playlist(req: Request):
         c = c.strip()
         if len(c) > 0 and len(c) < 80:
             canciones_limpias.append(c)
-            return "\n".join(canciones_limpias[:100])
+
+    return "\n".join(canciones_limpias[:100])
