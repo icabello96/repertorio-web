@@ -6,7 +6,7 @@ import os
 import subprocess
 import base64
 import re
-import html  # ✅ añadido
+import html
 
 app = FastAPI()
 
@@ -18,7 +18,7 @@ CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
 
-# ✅ NUEVO: función de limpieza
+# ✅ Limpieza semántica
 def limpiar_playlist(texto):
     texto = html.unescape(texto)
 
@@ -30,13 +30,19 @@ def limpiar_playlist(texto):
             continue
         if re.search(r"\d[\d,]*\s+saves", l, re.IGNORECASE):
             continue
-        if re.search(r"\b\d+\s?(hr|min)\b", l, re.IGNORECASE):  # ✅ NUEVO
+        if re.search(r"\b\d+\s?(hr|min)\b", l, re.IGNORECASE):
             continue
         if l.lower() in ["search", "your library", "premium"]:
             continue
         lineas_limpias.append(l)
 
+    # aquí aún queda con doble salto
     return "\n\n".join(lineas_limpias)
+
+
+# ✅ Paso intermedio REAL: normalización a una línea por canción
+def normalizar_saltos(texto):
+    return re.sub(r"\n\s*\n", "\n", texto).strip()
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -133,7 +139,7 @@ async def spotify_playlist(req: Request):
 
     playlist_id = match.group(1)
 
-    # ✅ Endpoint público
+    # Endpoint público
     res = requests.get(
         f"https://open.spotify.com/oembed?url=https://open.spotify.com/playlist/{playlist_id}"
     )
@@ -141,7 +147,7 @@ async def spotify_playlist(req: Request):
     if res.status_code != 200:
         return "No se ha podido acceder a la playlist"
 
-    # 🔴 fallback → parseo HTML
+    # fallback → parseo HTML
     html_page = requests.get(f"https://open.spotify.com/playlist/{playlist_id}").text
 
     canciones = re.findall(r'<span.*?>(.*?)</span>', html_page)
@@ -152,6 +158,10 @@ async def spotify_playlist(req: Request):
         if len(c) > 0 and len(c) < 80:
             canciones_limpias.append(c)
 
-    # ✅ CAMBIO MÍNIMO AQUÍ
     texto = "\n".join(canciones_limpias[:100])
-    return limpiar_playlist(texto)
+
+    # ✅ pipeline correcto
+    texto = limpiar_playlist(texto)
+    texto = normalizar_saltos(texto)
+
+    return texto
