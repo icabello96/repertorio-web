@@ -6,6 +6,7 @@ import os
 import subprocess
 import base64
 import re
+import html  # ✅ añadido
 
 app = FastAPI()
 
@@ -15,6 +16,25 @@ PDF_URL = "https://drive.google.com/uc?export=download&id=1GGv_629FDOYmcQ8sBJt5e
 # Variables de entorno (Render)
 CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
+
+
+# ✅ NUEVO: función de limpieza
+def limpiar_playlist(texto):
+    texto = html.unescape(texto)
+
+    lineas = [l.strip() for l in texto.split("\n")]
+
+    lineas_limpias = []
+    for l in lineas:
+        if not l:
+            continue
+        if re.search(r"\d[\d,]*\s+saves", l, re.IGNORECASE):
+            continue
+        if l.lower() in ["search", "your library", "premium"]:
+            continue
+        lineas_limpias.append(l)
+
+    return "\n\n".join(lineas_limpias)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -98,6 +118,7 @@ async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(
 
     return FileResponse(salida_path, filename=nombre_salida)
 
+
 @app.post("/spotify")
 async def spotify_playlist(req: Request):
 
@@ -110,7 +131,7 @@ async def spotify_playlist(req: Request):
 
     playlist_id = match.group(1)
 
-    # ✅ Endpoint público (NO requiere token)
+    # ✅ Endpoint público
     res = requests.get(
         f"https://open.spotify.com/oembed?url=https://open.spotify.com/playlist/{playlist_id}"
     )
@@ -119,15 +140,16 @@ async def spotify_playlist(req: Request):
         return "No se ha podido acceder a la playlist"
 
     # 🔴 fallback → parseo HTML
-    html = requests.get(f"https://open.spotify.com/playlist/{playlist_id}").text
+    html_page = requests.get(f"https://open.spotify.com/playlist/{playlist_id}").text
 
-    canciones = re.findall(r'<span.*?>(.*?)</span>', html)
+    canciones = re.findall(r'<span.*?>(.*?)</span>', html_page)
 
-    # Limpieza básica
     canciones_limpias = []
     for c in canciones:
         c = c.strip()
         if len(c) > 0 and len(c) < 80:
             canciones_limpias.append(c)
 
-    return "\n".join(canciones_limpias[:100])
+    # ✅ CAMBIO MÍNIMO AQUÍ
+    texto = "\n".join(canciones_limpias[:100])
+    return limpiar_playlist(texto)
