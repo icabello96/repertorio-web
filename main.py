@@ -103,9 +103,6 @@ async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(
 @app.post("/spotify")
 async def spotify_playlist(req: Request):
 
-    if not CLIENT_ID or not CLIENT_SECRET:
-        return "Error: credenciales Spotify no configuradas"
-
     data = await req.json()
     url = data.get("url")
 
@@ -115,38 +112,24 @@ async def spotify_playlist(req: Request):
 
     playlist_id = match.group(1)
 
-    # ✅ TOKEN
-    auth = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
-
-    token_res = requests.post(
-        "https://accounts.spotify.com/api/token",
-        headers={"Authorization": f"Basic {auth}"},
-        data={"grant_type": "client_credentials"}
+    # ✅ Endpoint público (NO requiere token)
+    res = requests.get(
+        f"https://open.spotify.com/oembed?url=https://open.spotify.com/playlist/{playlist_id}"
     )
 
-    token_data = token_res.json()
-    token = token_data.get("access_token")
+    if res.status_code != 200:
+        return "No se ha podido acceder a la playlist"
 
-    if not token:
-        return str(token_data)
+    # 🔴 fallback → parseo HTML
+    html = requests.get(f"https://open.spotify.com/playlist/{playlist_id}").text
 
-    # ✅ TRACKS (endpoint correcto)
-    tracks_res = requests.get(
-        f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks",
-        headers={"Authorization": f"Bearer {token}"},
-        params={"limit": 100}
-    )
+    canciones = re.findall(r'<span.*?>(.*?)</span>', html)
 
-    tracks_data = tracks_res.json()
+    # Limpieza básica
+    canciones_limpias = []
+    for c in canciones:
+        c = c.strip()
+        if len(c) > 0 and len(c) < 80:
+            canciones_limpias.append(c)
 
-    if "items" not in tracks_data:
-        return str(tracks_data)
-
-    canciones = []
-
-    for item in tracks_data["items"]:
-        track = item.get("track")
-        if track and track.get("name"):
-            canciones.append(track["name"])
-
-    return "\n".join(canciones)
+    return "\n".join(canciones_limpias[:100])
