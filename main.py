@@ -13,8 +13,8 @@ app = FastAPI()
 PDF_URL = "https://drive.google.com/uc?export=download&id=1GGv_629FDOYmcQ8sBJt5eOgu80Ow0xb1"
 
 # Spotify credentials (pon aquí los tuyos)
-CLIENT_ID = "TU_CLIENT_ID"
-CLIENT_SECRET = "TU_CLIENT_SECRET"
+CLIENT_ID = "44e17b3c6b82461eb93803229c06231a"
+CLIENT_SECRET = "a8e8214a20f344c2980b5d71ee2888e2"
 
 
 @app.get("/", response_class=HTMLResponse)
