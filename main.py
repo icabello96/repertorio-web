@@ -31,9 +31,6 @@ for l in lineas:
     if l.lower() in ["search", "your library", "premium", "home"]:
         continue
 
-    if l == "Created with Spotlistr - www.spotlistr.com":
-        continue
-
     lineas_limpias.append(l)
 
     return "\n\n".join(lineas_limpias)
