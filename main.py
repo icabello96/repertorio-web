@@ -30,9 +30,7 @@ def limpiar_playlist(texto):
             continue
         if l.lower() in ["search", "your library", "premium", "home"]:
     continue
-
-# ✅ filtrar Spotlistr
-if "spotlistr" in l.lower():
+if l == "Created with Spotlistr - www.spotlistr.com":
     continue
         lineas_limpias.append(l)
 
