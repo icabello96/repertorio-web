@@ -172,4 +172,3 @@ async def spotify_playlist(req: Request):
     texto = convertir_a_lista(texto)   # 👈 AQUÍ ESTÁ LA CLAVE
 
     return PlainTextResponse(texto)  # opcional pero más robusto
-``
