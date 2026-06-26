@@ -28,7 +28,7 @@ def limpiar_playlist(texto):
             continue
         if re.search(r"\b\d+\s?(hr|min)\b", l, re.IGNORECASE):
             continue
-        if l.lower() in ["search", "your library", "premium", "home", "Created with Spotlistr - www.spotlistr.com"]:
+        if l.lower() in ["search", "your library", "premium", "home", "created with spotlistr - www.spotlistr.com"]:
             continue
         lineas_limpias.append(l)
 
