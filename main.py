@@ -114,19 +114,20 @@ body::before {
 <div class="container">
     <h1>Generador de repertorios</h1>
 
-    <label>URL de playlist de Spotify</label><br>
+    <label>Introduce la URL de la playlist de Spotify</label><br>
     <input type="text" id="spotify_url" style="width:100%"><br><br>
 
-    <button type="button" onclick="procesarPlaylist()">Procesar playlist</button><br><br>
+    <button type="button" onclick="procesarPlaylist()"><img src="https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg" style="width:16px; vertical-align:top; margin-right:8px;">Procesar playlist</button><br><br>
 
     <form action="/procesar/" method="post">
-
+ 
+    <label>O introduce manualmente la lista de canciones (una por línea)</label><br>
         <textarea name="repertorio_texto" rows="45" style="width:100%" required></textarea><br><br>
 
         <label>Nombre del PDF de salida</label><br>
         <input type="text" name="nombre_salida" required><br><br>
 
-        <button type="submit">Generar PDF</button>
+        <button type="submit"><img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" style="width:16px; vertical-align:top; margin-right:8px;">Generar PDF</button>
     </form>
 
     <script>
