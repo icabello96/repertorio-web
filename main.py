@@ -55,12 +55,37 @@ async def home():
 <link rel="icon" href="https://losperrostratos.es/wp-content/uploads/2025/11/cropped-bk2a2736.jpg">
 <style>
     body {
-        font-family: Arial, Helvetica, sans-serif;
-        font-size: 16px;
-        max-width: 600px;
-        margin: auto;
-        padding: 20px;
-    }
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 16px;
+
+    /* ✅ centrado vertical + horizontal */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+
+    /* QUITA max-width AQUÍ */
+    padding: 20px;
+
+    /* fondo */
+    background-image: url('https://losperrostratos.es/wp-content/uploads/2026/01/zevento.jpeg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    position: relative;
+}
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    background-color: rgba(0, 0, 0, 0.5); /* intensidad del overlay */
+    z-index: -1;
+}
 
     input, textarea {
         width: 100%;
@@ -79,12 +104,14 @@ async def home():
         padding: 10px 15px;
         margin-top: 10px;
     }
+    h1, label {
+    color: white;
+    font-weight: bold;
+    }
 </style>
 </head>
 <body>
-
-
-    <img src="https://losperrostratos.es/wp-content/uploads/2025/11/neontr.png" width="150">
+<div class="container">
     <h1>Generador de repertorios</h1>
 
     <label>URL de playlist de Spotify</label><br>
@@ -116,7 +143,7 @@ async def home():
         document.getElementsByName("repertorio_texto")[0].value = text;
     }
     </script>
-
+    </div>
     </body>
     </html>
     """
