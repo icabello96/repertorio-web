@@ -21,18 +21,20 @@ def limpiar_playlist(texto):
     lineas = [l.strip() for l in texto.split("\n")]
 
     lineas_limpias = []
-    for l in lineas:
-        if not l:
-            continue
-        if re.search(r"\d[\d,]*\s+saves", l, re.IGNORECASE):
-            continue
-        if re.search(r"\b\d+\s?(hr|min)\b", l, re.IGNORECASE):
-            continue
-        if l.lower() in ["search", "your library", "premium", "home"]:
-    continue
-if l == "Created with Spotlistr - www.spotlistr.com":
-    continue
-        lineas_limpias.append(l)
+for l in lineas:
+    if not l:
+        continue
+    if re.search(r"\d[\d,]*\s+saves", l, re.IGNORECASE):
+        continue
+    if re.search(r"\b\d+\s?(hr|min)\b", l, re.IGNORECASE):
+        continue
+    if l.lower() in ["search", "your library", "premium", "home"]:
+        continue
+
+    if l == "Created with Spotlistr - www.spotlistr.com":
+        continue
+
+    lineas_limpias.append(l)
 
     return "\n\n".join(lineas_limpias)
 
