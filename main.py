@@ -32,7 +32,7 @@ def limpiar_playlist(texto):
             continue
         if re.search(r"\b\d+\s?(hr|min)\b", l, re.IGNORECASE):
             continue
-if l.lower() in ["search", "your library", "premium", "home"]:
+        if l.lower() in ["search", "your library", "premium", "home"]:
             continue
         lineas_limpias.append(l)
 
