@@ -59,8 +59,7 @@ async def home():
 
     <button onclick="procesarPlaylist()">Procesar playlist</button><br><br>
 
-    <form action="/procesar/" method="post">
-
+    <form id="formulario">
         <label>Repertorio</label><br>
         <textarea name="repertorio_texto" rows="15" style="width:100%" required></textarea><br><br>
 
@@ -68,10 +67,12 @@ async def home():
         <input type="text" name="nombre_salida" required><br><br>
 
         <button type="submit">Generar PDF</button>
-
     </form>
 
+    <div id="resultado" style="white-space: pre-wrap; margin-top:20px;"></div>
+
     <script>
+
     async function procesarPlaylist() {
         const url = document.getElementById("spotify_url").value;
 
@@ -84,6 +85,36 @@ async def home():
         const text = await res.text();
         document.getElementsByName("repertorio_texto")[0].value = text;
     }
+
+    document.getElementById("formulario").addEventListener("submit", async function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+
+        const res = await fetch("/procesar/", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+            document.getElementById("resultado").innerText = data.error;
+            return;
+        }
+
+        // ✅ Mostrar log
+        document.getElementById("resultado").innerText = data.log;
+
+        // ✅ Descargar automáticamente
+        const link = document.createElement("a");
+        link.href = "/download/" + data.file;
+        link.download = data.file;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    });
+
     </script>
 
     </body>
@@ -127,15 +158,12 @@ async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(
     output = resultado.stdout
 
     if resultado.returncode != 0:
-        return HTMLResponse(f"<pre>{resultado.stderr}</pre>")
+        return {"error": resultado.stderr}
 
-    return HTMLResponse(f"""
-    <h2>Resultado</h2>
-    <pre>{output}</pre>
-
-    <br>
-    <a href="/download/{nombre_salida}">Descargar PDF</a>
-    """)
+    return {
+        "log": output,
+        "file": nombre_salida
+    }
 
 
 # ---------- DESCARGA ----------
