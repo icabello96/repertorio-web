@@ -105,38 +105,6 @@ async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(
 
 if resultado.returncode != 0:
     return f"<pre>{resultado.stderr}</pre>"
-
-# ✅ detectar canciones no encontradas
-lineas = output.split("\n")
-errores = [l for l in lineas if "⚠️" in l]
-
-# ✅ SI hay errores → aviso + descarga
-if errores:
-    errores_texto = "\\n".join(errores)
-
-    return HTMLResponse(f"""
-    <html>
-    <body>
-    <script>
-        alert("⚠️ Canciones no encontradas:\\n\\n{errores_texto}");
-        
-        // ✅ descargar SIEMPRE el PDF
-        const link = document.createElement('a');
-        link.href = "/download/{nombre_salida}";
-        link.download = "{nombre_salida}";
-        document.body.appendChild(link);
-        link.click();
-
-        // volver a home
-        setTimeout(() => {{
-            window.location.href = "/";
-        }}, 800);
-    </script>
-    </body>
-    </html>
-    """)
-
-# ✅ SI TODO OK → descarga directa
 return FileResponse(salida_path, filename=nombre_salida)
 
 @app.post("/spotify")
