@@ -62,7 +62,7 @@ async def home():
     <form action="/procesar/" method="post">
 
         <label>Pega aquí el repertorio (una canción por línea)</label><br>
-        <textarea name="repertorio_texto" rows="15" style="width:100%" required></textarea><br><br>
+        <textarea name="repertorio_texto" rows="45" style="width:100%" required></textarea><br><br>
 
         <label>Nombre del PDF de salida</label><br>
         <input type="text" name="nombre_salida" required><br><br>
