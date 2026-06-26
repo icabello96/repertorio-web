@@ -104,7 +104,19 @@ async def home():
         }
 
         // ✅ Mostrar log
-        document.getElementById("resultado").innerText = data.log;
+        const lineas = data.log.split("\n");
+
+// ✅ filtrar solo errores
+const errores = lineas.filter(l => l.includes("⚠️"));
+
+if (errores.length > 0) {
+    document.getElementById("resultado").innerHTML =
+        "<b>⚠️ Canciones no encontradas (" + errores.length + "):</b><br><br>" +
+        errores.join("<br>");
+} else {
+    document.getElementById("resultado").innerHTML =
+        "<b style='color:green'>✅ Todas las canciones encontradas</b>";
+}
 
         // ✅ Descargar automáticamente
         const link = document.createElement("a");
