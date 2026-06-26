@@ -127,10 +127,16 @@ async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(
         text=True
     )
 
-    if resultado.returncode != 0:
-        return f"<pre>{resultado.stderr}</pre>"
+    output = resultado.stdout
 
-    return FileResponse(salida_path, filename=nombre_salida)
+if resultado.returncode != 0:
+    return f"<pre>{resultado.stderr}</pre>"
+
+return HTMLResponse(f"""
+<pre>{output}</pre>
+<br><br>
+<a href="/download/{nombre_salida}">Descargar PDF</a>
+""")
 
 
 @app.post("/spotify")
