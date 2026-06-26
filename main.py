@@ -4,21 +4,16 @@ import tempfile
 import requests
 import os
 import subprocess
-import base64
 import re
 import html
 
 app = FastAPI()
 
-# PDF base
 PDF_URL = "https://drive.google.com/uc?export=download&id=1GGv_629FDOYmcQ8sBJt5eOgu80Ow0xb1"
 
-# Variables de entorno (Render)
-CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
+# ---------- LIMPIEZA ----------
 
-# ✅ Limpieza semántica
 def limpiar_playlist(texto):
     texto = html.unescape(texto)
 
@@ -39,17 +34,17 @@ def limpiar_playlist(texto):
     return "\n\n".join(lineas_limpias)
 
 
-# ✅ Normaliza saltos a 1 línea por canción
 def normalizar_saltos(texto):
     return re.sub(r"\n\s*\n", "\n", texto).strip()
 
 
-# ✅ 🔥 NUEVA FUNCIÓN (la clave)
 def convertir_a_lista(texto):
-    texto = texto.strip('"')              # quita comillas externas
-    texto = texto.replace("\\n", "\n")   # convierte \n en saltos reales
+    texto = texto.strip('"')
+    texto = texto.replace("\\n", "\n")
     return texto.strip()
 
+
+# ---------- FRONT ----------
 
 @app.get("/", response_class=HTMLResponse)
 async def home():
@@ -57,23 +52,23 @@ async def home():
     <html>
     <body>
 
-    <img src="https://losperrostratos.es/wp-content/uploads/2025/11/neontr.png" width="150">
     <h1>Generador de repertorios</h1>
 
     <label>URL de playlist Spotify</label><br>
     <input type="text" id="spotify_url" style="width:100%"><br><br>
 
-    <button type="button" onclick="procesarPlaylist()">Procesar playlist</button><br><br>
+    <button onclick="procesarPlaylist()">Procesar playlist</button><br><br>
 
     <form action="/procesar/" method="post">
 
-        <label>Pega aquí el repertorio (una canción por línea)</label><br>
+        <label>Repertorio</label><br>
         <textarea name="repertorio_texto" rows="15" style="width:100%" required></textarea><br><br>
 
-        <label>Nombre del PDF de salida</label><br>
+        <label>Nombre PDF</label><br>
         <input type="text" name="nombre_salida" required><br><br>
 
         <button type="submit">Generar PDF</button>
+
     </form>
 
     <script>
@@ -95,6 +90,8 @@ async def home():
     </html>
     """
 
+
+# ---------- PROCESAR PDF ----------
 
 @app.post("/procesar/")
 async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(...)):
@@ -129,15 +126,27 @@ async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(
 
     output = resultado.stdout
 
-if resultado.returncode != 0:
-    return f"<pre>{resultado.stderr}</pre>"
+    if resultado.returncode != 0:
+        return HTMLResponse(f"<pre>{resultado.stderr}</pre>")
 
-return HTMLResponse(f"""
-<pre>{output}</pre>
-<br><br>
-<a href="/download/{nombre_salida}">Descargar PDF</a>
-""")
+    return HTMLResponse(f"""
+    <h2>Resultado</h2>
+    <pre>{output}</pre>
 
+    <br>
+    <a href="/download/{nombre_salida}">Descargar PDF</a>
+    """)
+
+
+# ---------- DESCARGA ----------
+
+@app.get("/download/{file_name}")
+async def download(file_name: str):
+    path = os.path.join(tempfile.gettempdir(), file_name)
+    return FileResponse(path, filename=file_name)
+
+
+# ---------- SPOTIFY ----------
 
 @app.post("/spotify")
 async def spotify_playlist(req: Request):
@@ -151,15 +160,6 @@ async def spotify_playlist(req: Request):
 
     playlist_id = match.group(1)
 
-    # Endpoint público
-    res = requests.get(
-        f"https://open.spotify.com/oembed?url=https://open.spotify.com/playlist/{playlist_id}"
-    )
-
-    if res.status_code != 200:
-        return "No se ha podido acceder a la playlist"
-
-    # fallback → parseo HTML
     html_page = requests.get(f"https://open.spotify.com/playlist/{playlist_id}").text
 
     canciones = re.findall(r'<span.*?>(.*?)</span>', html_page)
@@ -167,14 +167,13 @@ async def spotify_playlist(req: Request):
     canciones_limpias = []
     for c in canciones:
         c = c.strip()
-        if len(c) > 0 and len(c) < 80:
+        if 0 < len(c) < 80:
             canciones_limpias.append(c)
 
     texto = "\n".join(canciones_limpias[:100])
 
-    # ✅ pipeline
     texto = limpiar_playlist(texto)
     texto = normalizar_saltos(texto)
-    texto = convertir_a_lista(texto)   # 👈 AQUÍ ESTÁ LA CLAVE
+    texto = convertir_a_lista(texto)
 
-    return PlainTextResponse(texto)  # opcional pero más robusto
+    return PlainTextResponse(texto)
