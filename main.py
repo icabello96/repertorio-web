@@ -164,4 +164,4 @@ async def spotify_playlist(req: Request):
     texto = limpiar_playlist(texto)
     texto = normalizar_saltos(texto)
 
-return texto.replace("\n", "\r\n")
+return texto
