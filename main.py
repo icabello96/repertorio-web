@@ -51,20 +51,49 @@ def convertir_a_lista(texto):
 async def home():
     return """
     <html>
-    <body>
+<head>
+<style>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 16px;
+        max-width: 600px;
+        margin: auto;
+        padding: 20px;
+    }
+
+    input, textarea {
+        width: 100%;
+        max-width: 500px;
+        font-size: 16px;
+        padding: 8px;
+        box-sizing: border-box;
+    }
+
+    textarea {
+        height: 250px;
+    }
+
+    button {
+        font-size: 16px;
+        padding: 10px 15px;
+        margin-top: 10px;
+    }
+</style>
+</head>
+<body>
+
 
     <img src="https://losperrostratos.es/wp-content/uploads/2025/11/neontr.png" width="150">
     <h1>Generador de repertorios</h1>
 
-    <label>URL de playlist Spotify</label><br>
+    <label>URL de playlist de Spotify</label><br>
     <input type="text" id="spotify_url" style="width:100%"><br><br>
 
     <button type="button" onclick="procesarPlaylist()">Procesar playlist</button><br><br>
 
     <form action="/procesar/" method="post">
 
-        <label>Pega aquí el repertorio (una canción por línea)</label><br>
-        <textarea name="repertorio_texto" rows="15" style="width:100%" required></textarea><br><br>
+        <textarea name="repertorio_texto" rows="45" style="width:100%" required></textarea><br><br>
 
         <label>Nombre del PDF de salida</label><br>
         <input type="text" name="nombre_salida" required><br><br>
