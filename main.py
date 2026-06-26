@@ -52,6 +52,7 @@ async def home():
     return """
     <html>
 <head>
+<link rel="icon" href="https://losperrostratos.es/wp-content/uploads/2025/11/cropped-bk2a2736.jpg">
 <style>
     body {
         font-family: Arial, Helvetica, sans-serif;
