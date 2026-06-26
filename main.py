@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 import tempfile
 import requests
 import os
@@ -36,13 +36,19 @@ def limpiar_playlist(texto):
             continue
         lineas_limpias.append(l)
 
-    # aquí aún queda con doble salto
     return "\n\n".join(lineas_limpias)
 
 
-# ✅ Paso intermedio REAL: normalización a una línea por canción
+# ✅ Normaliza saltos a 1 línea por canción
 def normalizar_saltos(texto):
     return re.sub(r"\n\s*\n", "\n", texto).strip()
+
+
+# ✅ 🔥 NUEVA FUNCIÓN (la clave)
+def convertir_a_lista(texto):
+    texto = texto.strip('"')              # quita comillas externas
+    texto = texto.replace("\\n", "\n")   # convierte \n en saltos reales
+    return texto.strip()
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -62,7 +68,7 @@ async def home():
     <form action="/procesar/" method="post">
 
         <label>Pega aquí el repertorio (una canción por línea)</label><br>
-        <textarea name="repertorio_texto" rows="45" style="width:100%" required></textarea><br><br>
+        <textarea name="repertorio_texto" rows="15" style="width:100%" required></textarea><br><br>
 
         <label>Nombre del PDF de salida</label><br>
         <input type="text" name="nombre_salida" required><br><br>
@@ -160,8 +166,10 @@ async def spotify_playlist(req: Request):
 
     texto = "\n".join(canciones_limpias[:100])
 
-    # ✅ pipeline correcto
+    # ✅ pipeline
     texto = limpiar_playlist(texto)
     texto = normalizar_saltos(texto)
+    texto = convertir_a_lista(texto)   # 👈 AQUÍ ESTÁ LA CLAVE
 
-return texto
+    return PlainTextResponse(texto)  # opcional pero más robusto
+``
