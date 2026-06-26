@@ -30,6 +30,7 @@ def limpiar_playlist(texto):
             continue
         if l.lower() in ["search", "your library", "premium", "home"]:
     continue
+
 # ✅ filtrar Spotlistr
 if "spotlistr" in l.lower():
     continue
