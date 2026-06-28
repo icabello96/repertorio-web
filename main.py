@@ -64,29 +64,29 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
+    min-height: 100svh;
 
     padding: 10px;
+
+    position: relative;
+}
+
+/* ✅ fondo + overlay TODO AQUÍ */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
 
     background-image: url('https://losperrostratos.es/wp-content/uploads/2026/01/zevento.jpeg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
 
-    position: relative;
-}
+    /* overlay negro */
+    box-shadow: inset 0 0 0 1000px rgba(0,0,0,0.5);
 
-body::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
     z-index: -1;
 }
-
 .container {
     width: 100%;
     max-width: 600px;
