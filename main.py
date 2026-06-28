@@ -50,24 +50,24 @@ def convertir_a_lista(texto):
 @app.get("/", response_class=HTMLResponse)
 async def home():
     return """
-    <html>
+<html>
 <head>
-<link rel="icon" href="https://losperrostratos.es/wp-content/uploads/2025/11/cropped-bk2a2736.jpg">
-<style>
-    body {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 16px;
 
-    /* ✅ centrado vertical + horizontal */
+<link rel="icon" href="https://losperrostratos.es/wp-content/uploads/2025/11/cropped-bk2a2736.jpg">
+
+<style>
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 18px;
+
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
 
-    /* QUITA max-width AQUÍ */
-    padding: 20px;
+    padding: 10px;
 
-    /* fondo */
     background-image: url('https://losperrostratos.es/wp-content/uploads/2026/01/zevento.jpeg');
     background-size: cover;
     background-position: center;
@@ -75,6 +75,7 @@ async def home():
 
     position: relative;
 }
+
 body::before {
     content: "";
     position: fixed;
@@ -82,72 +83,117 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
-
-    background-color: rgba(0, 0, 0, 0.5); /* intensidad del overlay */
+    background-color: rgba(0, 0, 0, 0.5);
     z-index: -1;
 }
 
-    input, textarea {
-        width: 100%;
-        max-width: 500px;
-        font-size: 16px;
-        padding: 8px;
-        box-sizing: border-box;
+.container {
+    width: 100%;
+    max-width: 600px;
+}
+
+input, textarea {
+    width: 100%;
+    max-width: 100%;
+    font-size: 18px;
+    padding: 10px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    border: none;
+}
+
+textarea {
+    height: 250px;
+    resize: vertical;
+}
+
+button {
+    font-size: 18px;
+    padding: 12px 16px;
+    margin-top: 10px;
+    width: 100%;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+}
+
+h1, label {
+    color: white;
+    font-weight: bold;
+}
+
+h1 {
+    text-align: center;
+}
+
+/* ✅ ajuste mobile */
+@media (max-width: 600px) {
+    body {
+        align-items: flex-start;
+        padding: 10px;
     }
 
     textarea {
-        height: 250px;
+        height: 40vh;
     }
+}
 
-    button {
-        font-size: 16px;
-        padding: 10px 15px;
-        margin-top: 10px;
-    }
-    h1, label {
-    color: white;
-    font-weight: bold;
-    }
 </style>
 </head>
+
 <body>
+
 <div class="container">
+
     <h1>Generador de repertorios</h1>
 
-    <label>Introduce la URL de la playlist de Spotify</label><br>
-    <input type="text" id="spotify_url" style="width:100%"><br><br>
+    <label>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg"
+             style="width:20px; vertical-align:middle; margin-right:8px;">
+        URL de playlist de Spotify
+    </label><br>
 
-    <button type="button" onclick="procesarPlaylist()"><img src="https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg" style="width:16px; vertical-align:top; margin-right:8px;">Procesar playlist</button><br><br>
+    <input type="text" id="spotify_url"><br><br>
+
+    <button type="button" onclick="procesarPlaylist()">
+        Procesar playlist
+    </button><br><br>
 
     <form action="/procesar/" method="post">
- 
-    <label>O introduce manualmente la lista de canciones (una por línea)</label><br>
-        <textarea name="repertorio_texto" rows="45" style="width:100%" required></textarea><br><br>
 
-        <label>Nombre del PDF de salida</label><br>
+        <textarea name="repertorio_texto" required></textarea><br><br>
+
+        <label>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg"
+                 style="width:18px; vertical-align:middle; margin-right:8px;">
+            Nombre del PDF de salida
+        </label><br>
+
         <input type="text" name="nombre_salida" required><br><br>
 
-        <button type="submit"><img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" style="width:16px; vertical-align:top; margin-right:8px;">Generar PDF</button>
+        <button type="submit">Generar PDF</button>
     </form>
 
-    <script>
-    async function procesarPlaylist() {
-        const url = document.getElementById("spotify_url").value;
+</div>
 
-        const res = await fetch("/spotify", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({url})
-        });
+<script>
+async function procesarPlaylist() {
+    const url = document.getElementById("spotify_url").value;
 
-        const text = await res.text();
-        document.getElementsByName("repertorio_texto")[0].value = text;
-    }
-    </script>
-    </div>
-    </body>
-    </html>
-    """
+    const res = await fetch("/spotify", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({url})
+    });
+
+    const text = await res.text();
+    document.getElementsByName("repertorio_texto")[0].value = text;
+}
+</script>
+
+</body>
+</html>
+"""
 
 
 # ---------- PROCESAR PDF ----------
