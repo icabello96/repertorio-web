@@ -53,6 +53,8 @@ async def home():
 <html>
 <head>
 
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <link rel="icon" href="https://losperrostratos.es/wp-content/uploads/2025/11/cropped-bk2a2736.jpg">
 
 <style>
@@ -71,7 +73,7 @@ body {
     position: relative;
 }
 
-/* ✅ fondo + overlay TODO AQUÍ */
+/* ✅ fondo + overlay compatible iPhone */
 body::before {
     content: "";
     position: fixed;
@@ -82,19 +84,19 @@ body::before {
     background-position: center;
     background-repeat: no-repeat;
 
-    /* overlay negro */
     box-shadow: inset 0 0 0 1000px rgba(0,0,0,0.5);
 
     z-index: -1;
 }
+
 .container {
     width: 100%;
     max-width: 600px;
 }
 
+/* inputs */
 input, textarea {
     width: 100%;
-    max-width: 100%;
     font-size: 18px;
     padding: 10px;
     box-sizing: border-box;
@@ -102,11 +104,13 @@ input, textarea {
     border: none;
 }
 
+/* textarea */
 textarea {
     height: 250px;
     resize: vertical;
 }
 
+/* botones */
 button {
     font-size: 18px;
     padding: 12px 16px;
@@ -117,6 +121,7 @@ button {
     cursor: pointer;
 }
 
+/* textos */
 h1, label {
     color: white;
     font-weight: bold;
@@ -126,15 +131,42 @@ h1 {
     text-align: center;
 }
 
-/* ✅ ajuste mobile */
+/* iconos */
+.icon {
+    width: 20px;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+/* ✅ MOBILE REAL */
 @media (max-width: 600px) {
+
     body {
         align-items: flex-start;
-        padding: 10px;
+        padding: 15px;
+        font-size: 20px;
+    }
+
+    .container {
+        max-width: 100%;
+    }
+
+    input, textarea {
+        font-size: 20px;
+        padding: 12px;
     }
 
     textarea {
-        height: 40vh;
+        height: 50vh;
+    }
+
+    button {
+        font-size: 20px;
+        padding: 14px;
+    }
+
+    h1 {
+        font-size: 24px;
     }
 }
 
@@ -148,8 +180,7 @@ h1 {
     <h1>Generador de repertorios</h1>
 
     <label>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg"
-             style="width:20px; vertical-align:middle; margin-right:8px;">
+        <img class="icon" src="https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg">
         URL de playlist de Spotify
     </label><br>
 
@@ -164,8 +195,7 @@ h1 {
         <textarea name="repertorio_texto" required></textarea><br><br>
 
         <label>
-            <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg"
-                 style="width:18px; vertical-align:middle; margin-right:8px;">
+            <img class="icon" src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg">
             Nombre del PDF de salida
         </label><br>
 
