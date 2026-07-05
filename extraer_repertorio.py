@@ -5,6 +5,7 @@
 import sys, unicodedata, re
 import fitz  # PyMuPDF
 from pypdf import PdfReader, PdfWriter
+from io import BytesIO
 
 
 # ---------- Normalización ----------
@@ -37,7 +38,7 @@ def titulo_base(norm_title):
     F#M, C#m, Bb, BbM7, etc.
     """
     return re.sub(
-        r'\s+[A-G](#|B)?(M|MAJ7|M7|MIN|M|7|DIM|AUG)?$',
+        r'\s+#|B?(M|MAJ7|M7|MIN|M|7|DIM|AUG)?$',
         '',
         norm_title
     ).strip()
@@ -82,11 +83,40 @@ def detectar_canciones(pdf_path, size_threshold=20):
                     candidatos.append((text_line.strip(), base, i))
 
     canciones = []
+
     for idx, (titulo, base, inicio) in enumerate(candidatos):
         fin = candidatos[idx + 1][2] - 1 if idx + 1 < len(candidatos) else len(doc) - 1
         canciones.append((titulo, base, inicio, fin))
 
     return canciones
+
+
+# ---------- Página de aviso ----------
+
+def agregar_pagina_faltante(writer, titulo):
+    doc = fitz.open()
+
+    page = doc.new_page()
+
+    page.insert_text(
+        (72, 150),
+        "FALTA",
+        fontsize=28
+    )
+
+    page.insert_text(
+        (72, 220),
+        titulo,
+        fontsize=20
+    )
+
+    pdf_bytes = doc.write()
+    doc.close()
+
+    aviso_reader = PdfReader(BytesIO(pdf_bytes))
+
+    for p in aviso_reader.pages:
+        writer.add_page(p)
 
 
 # ---------- Extracción ----------
@@ -96,6 +126,7 @@ def extraer(pdf_path, lista_path, salida_path):
     writer = PdfWriter()
 
     canciones = detectar_canciones(pdf_path)
+
     if not canciones:
         print("Error: no se detectaron títulos.")
         return
@@ -111,6 +142,7 @@ def extraer(pdf_path, lista_path, salida_path):
     ]
 
     for original, buscado in zip(deseadas_raw, deseadas):
+
         coincidencias = [
             (titulo, ini, fin)
             for titulo, base, ini, fin in canciones
@@ -118,13 +150,20 @@ def extraer(pdf_path, lista_path, salida_path):
         ]
 
         if coincidencias:
+
             print(f"✓ {original} → {len(coincidencias)} versión(es)")
+
             for titulo, ini, fin in coincidencias:
+
                 print(f"   - {titulo} (páginas {ini + 1}-{fin + 1})")
+
                 for p in range(ini, fin + 1):
                     writer.add_page(reader.pages[p])
+
         else:
+
             print(f"⚠️ No encontrada: {original}")
+            agregar_pagina_faltante(writer, original)
 
     with open(salida_path, "wb") as f:
         writer.write(f)
@@ -135,8 +174,13 @@ def extraer(pdf_path, lista_path, salida_path):
 # ---------- Main ----------
 
 if __name__ == "__main__":
+
     if len(sys.argv) != 4:
         print("Uso: python3 extraer_repertorio.py <PDF> <lista.txt> <salida.pdf>")
         sys.exit(1)
 
-    extraer(sys.argv[1], sys.argv[2], sys.argv[3])
+    extraer(
+        sys.argv[1],
+        sys.argv[2],
+        sys.argv[3]
+    )
