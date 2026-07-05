@@ -263,7 +263,40 @@ async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(
     if resultado.returncode != 0:
         return f"<pre>{resultado.stderr}</pre>"
 
-        return FileResponse(salida_path, filename=nombre_salida)
+    output = resultado.stdout
+
+    # ✅ detectar canciones no encontradas
+    lineas = output.split("\n")
+    errores = [l for l in lineas if "⚠️" in l]
+
+    # ✅ si hay errores → aviso + descarga AUTOMÁTICA
+    if errores:
+        errores_limpios = [l.replace("⚠️ No encontrada: ", "• ") for l in errores]
+        errores_texto = "\\n".join(errores_limpios)
+
+        return HTMLResponse(f"""
+        <html>
+        <body>
+        <script>
+            alert("⚠️ Canciones no encontradas:\\n\\n{errores_texto}");
+
+            // ✅ descargar PDF SIEMPRE
+            const link = document.createElement('a');
+            link.href = "/download/{nombre_salida}";
+            link.download = "{nombre_salida}";
+            document.body.appendChild(link);
+            link.click();
+
+            setTimeout(() => {{
+                window.location.href = "/";
+            }}, 800);
+        </script>
+        </body>
+        </html>
+        """)
+
+    # ✅ todo OK → descarga directa
+    return FileResponse(salida_path, filename=nombre_salida)
 
 
 # ---------- DESCARGA ----------
