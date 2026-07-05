@@ -2,141 +2,192 @@
 # extraer_repertorio.py
 # Requiere: pip3 install pymupdf pypdf
 
-import sys, unicodedata, re
-import fitz  # PyMuPDF
+import sys
+import unicodedata
+import re
+import os
+import fitz # PyMuPDF
 from pypdf import PdfReader, PdfWriter
 
 
 # ---------- Normalización ----------
 
 def normalize_text(s):
-    s = (s or "").upper()
-    s = ''.join(
-        c for c in unicodedata.normalize('NFD', s)
-        if unicodedata.category(c) != 'Mn'
-    )
-    s = re.sub(r'[^A-Z0-9 #]', ' ', s)
-    s = re.sub(r'\s+', ' ', s).strip()
-    return s
+s = (s or "").upper()
+s = ''.join(
+c for c in unicodedata.normalize('NFD', s)
+if unicodedata.category(c) != 'Mn'
+)
+s = re.sub(r'[^A-Z0-9 #]', ' ', s)
+s = re.sub(r'\s+', ' ', s).strip()
+return s
 
 
 def limpiar_titulo_lista(s):
-    """
-    Elimina info extra en la lista:
-    - texto entre paréntesis
-    - texto después de '-'
-    """
-    s = re.sub(r'\(.*?\)', '', s)
-    s = s.split('-')[0]
-    return s.strip()
+"""
+Elimina info extra en la lista:
+- texto entre paréntesis
+- texto después de '-'
+"""
+s = re.sub(r'\(.*?\)', '', s)
+s = s.split('-')[0]
+return s.strip()
 
 
 def titulo_base(norm_title):
-    """
-    Elimina tonalidades:
-    F#M, C#m, Bb, BbM7, etc.
-    """
-    return re.sub(
-        r'\s+[A-G](#|B)?(M|MAJ7|M7|MIN|M|7|DIM|AUG)?$',
-        '',
-        norm_title
-    ).strip()
+"""
+Elimina tonalidades:
+F#M, C#m, Bb, BbM7, etc.
+"""
+return re.sub(
+r'\s+#|B?(M|MAJ7|M7|MIN|M|7|DIM|AUG)?$',
+'',
+norm_title
+).strip()
 
 
 # ---------- Detección de canciones ----------
 
 def detectar_canciones(pdf_path, size_threshold=20):
-    doc = fitz.open(pdf_path)
-    candidatos = []
+doc = fitz.open(pdf_path)
+candidatos = []
 
-    for i, page in enumerate(doc):
-        blocks = page.get_text("dict")["blocks"]
-        for b in blocks:
-            for l in b.get("lines", []):
-                spans = l.get("spans", [])
-                if not spans:
-                    continue
+for i, page in enumerate(doc):
+blocks = page.get_text("dict")["blocks"]
 
-                max_size = max(s.get("size", 0) for s in spans)
-                text_line = ''.join(s.get("text", '') for s in spans).strip()
+for b in blocks:
+for l in b.get("lines", []):
+spans = l.get("spans", [])
 
-                if len(text_line) < 3:
-                    continue
+if not spans:
+continue
 
-                if any(tok in text_line for tok in ['|', '||', ':', '—']) and len(text_line) < 40:
-                    continue
+max_size = max(s.get("size", 0) for s in spans)
+text_line = ''.join(s.get("text", '') for s in spans).strip()
 
-                if text_line.upper() == text_line and max_size >= size_threshold:
-                    norm = normalize_text(text_line)
-                    base = titulo_base(norm)
+if len(text_line) < 3:
+continue
 
-                    if not base:
-                        continue
+if any(tok in text_line for tok in ['|', '||', ':', '—']) and len(text_line) < 40:
+continue
 
-                    if any(k in base for k in [
-                        "INTRO", "ESTROFA", "BILLO", "ESTRIBILLO",
-                        "POSTCORO", "PUENTE", "SOLO", "OUTRO"
-                    ]):
-                        continue
+if text_line.upper() == text_line and max_size >= size_threshold:
+norm = normalize_text(text_line)
+base = titulo_base(norm)
 
-                    candidatos.append((text_line.strip(), base, i))
+if not base:
+continue
 
-    canciones = []
-    for idx, (titulo, base, inicio) in enumerate(candidatos):
-        fin = candidatos[idx + 1][2] - 1 if idx + 1 < len(candidatos) else len(doc) - 1
-        canciones.append((titulo, base, inicio, fin))
+if any(k in base for k in [
+"INTRO", "ESTROFA", "BILLO", "ESTRIBILLO",
+"POSTCORO", "PUENTE", "SOLO", "OUTRO"
+]):
+continue
 
-    return canciones
+candidatos.append((text_line.strip(), base, i))
+
+canciones = []
+
+for idx, (titulo, base, inicio) in enumerate(candidatos):
+fin = candidatos[idx + 1][2] - 1 if idx + 1 < len(candidatos) else len(doc) - 1
+canciones.append((titulo, base, inicio, fin))
+
+return canciones
+
+
+# ---------- Página de aviso ----------
+
+def crear_pagina_faltante(titulo):
+doc = fitz.open()
+
+page = doc.new_page()
+
+texto = f"FALTA\n\n{titulo}"
+
+page.insert_textbox(
+fitz.Rect(50, 150, 545, 650),
+texto,
+fontsize=28,
+align=1
+)
+
+temp_path = "__faltante_temp__.pdf"
+doc.save(temp_path)
+doc.close()
+
+return temp_path
 
 
 # ---------- Extracción ----------
 
 def extraer(pdf_path, lista_path, salida_path):
-    reader = PdfReader(pdf_path)
-    writer = PdfWriter()
+reader = PdfReader(pdf_path)
+writer = PdfWriter()
 
-    canciones = detectar_canciones(pdf_path)
-    if not canciones:
-        print("Error: no se detectaron títulos.")
-        return
+canciones = detectar_canciones(pdf_path)
 
-    print(f"Detectadas {len(canciones)} canciones.\n")
+if not canciones:
+print("Error: no se detectaron títulos.")
+return
 
-    with open(lista_path, "r", encoding="utf-8") as f:
-        deseadas_raw = [l.strip() for l in f if l.strip()]
+print(f"Detectadas {len(canciones)} canciones.\n")
 
-    deseadas = [
-        normalize_text(limpiar_titulo_lista(x))
-        for x in deseadas_raw
-    ]
+with open(lista_path, "r", encoding="utf-8") as f:
+deseadas_raw = [l.strip() for l in f if l.strip()]
 
-    for original, buscado in zip(deseadas_raw, deseadas):
-        coincidencias = [
-            (titulo, ini, fin)
-            for titulo, base, ini, fin in canciones
-            if base == buscado
-        ]
+deseadas = [
+normalize_text(limpiar_titulo_lista(x))
+for x in deseadas_raw
+]
 
-        if coincidencias:
-            print(f"✓ {original} → {len(coincidencias)} versión(es)")
-            for titulo, ini, fin in coincidencias:
-                print(f"   - {titulo} (páginas {ini + 1}-{fin + 1})")
-                for p in range(ini, fin + 1):
-                    writer.add_page(reader.pages[p])
-        else:
-            print(f"⚠️ No encontrada: {original}")
+for original, buscado in zip(deseadas_raw, deseadas):
 
-    with open(salida_path, "wb") as f:
-        writer.write(f)
+coincidencias = [
+(titulo, ini, fin)
+for titulo, base, ini, fin in canciones
+if base == buscado
+]
 
-    print(f"\nPDF generado: {salida_path}")
+if coincidencias:
+
+print(f"✓ {original} → {len(coincidencias)} versión(es)")
+
+for titulo, ini, fin in coincidencias:
+
+print(f" - {titulo} (páginas {ini + 1}-{fin + 1})")
+
+for p in range(ini, fin + 1):
+writer.add_page(reader.pages[p])
+
+else:
+
+print(f"⚠️ No encontrada: {original}")
+
+aviso_pdf = crear_pagina_faltante(original)
+
+aviso_reader = PdfReader(aviso_pdf)
+
+for page in aviso_reader.pages:
+writer.add_page(page)
+
+os.remove(aviso_pdf)
+
+with open(salida_path, "wb") as f:
+writer.write(f)
+
+print(f"\nPDF generado: {salida_path}")
 
 
 # ---------- Main ----------
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        print("Uso: python3 extraer_repertorio.py <PDF> <lista.txt> <salida.pdf>")
-        sys.exit(1)
 
-    extraer(sys.argv[1], sys.argv[2], sys.argv[3])
+if len(sys.argv) != 4:
+print("Uso: python3 extraer_repertorio.py <PDF> <lista.txt> <salida.pdf>")
+sys.exit(1)
+
+extraer(
+sys.argv[1],
+sys.argv[2],
+sys.argv[3]
+)
