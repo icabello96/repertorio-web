@@ -1,340 +1,142 @@
-from fastapi import FastAPI, Form, Request
-from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
-import tempfile
-import requests
-import os
-import subprocess
-import re
-import html
+#!/usr/bin/env python3
+# extraer_repertorio.py
+# Requiere: pip3 install pymupdf pypdf
 
-app = FastAPI()
+import sys, unicodedata, re
+import fitz  # PyMuPDF
+from pypdf import PdfReader, PdfWriter
 
-# PDF base
-PDF_URL = "https://drive.google.com/uc?export=download&id=1GGv_629FDOYmcQ8sBJt5eOgu80Ow0xb1"
 
+# ---------- Normalización ----------
 
-# ---------- LIMPIEZA ----------
-
-def limpiar_playlist(texto):
-    texto = html.unescape(texto)
-
-    lineas = [l.strip() for l in texto.split("\n")]
-
-    lineas_limpias = []
-    for l in lineas:
-        if not l:
-            continue
-        if re.search(r"\d[\d,]*\s+saves", l, re.IGNORECASE):
-            continue
-        if re.search(r"\b\d+\s?(hr|min)\b", l, re.IGNORECASE):
-            continue
-        if l.lower() in ["search", "your library", "premium", "home", "created with spotlistr - www.spotlistr.com"]:
-            continue
-        lineas_limpias.append(l)
-
-    return "\n\n".join(lineas_limpias)
-
-
-def normalizar_saltos(texto):
-    return re.sub(r"\n\s*\n", "\n", texto).strip()
-
-
-def convertir_a_lista(texto):
-    texto = texto.strip('"')
-    texto = texto.replace("\\n", "\n")
-    return texto.strip()
-
-
-# ---------- FRONT ----------
-
-@app.get("/", response_class=HTMLResponse)
-async def home():
-    return """
-<html>
-<head>
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<link rel="icon" href="https://losperrostratos.es/wp-content/uploads/2025/11/cropped-bk2a2736.jpg">
-
-<style>
-
-body {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 18px;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100svh;
-
-    padding: 10px;
-
-    position: relative;
-}
-
-/* ✅ fondo + overlay compatible iPhone */
-body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-
-    background-image: url('https://losperrostratos.es/wp-content/uploads/2026/01/zevento.jpeg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-
-    box-shadow: inset 0 0 0 1000px rgba(0,0,0,0.5);
-
-    z-index: -1;
-}
-
-.container {
-    width: 100%;
-    max-width: 600px;
-}
-
-/* inputs */
-input, textarea {
-    width: 100%;
-    font-size: 18px;
-    padding: 10px;
-    box-sizing: border-box;
-    border-radius: 6px;
-    border: none;
-}
-
-/* textarea */
-textarea {
-    height: 250px;
-    resize: vertical;
-}
-
-/* botones */
-button {
-    font-size: 18px;
-    padding: 12px 16px;
-    margin-top: 10px;
-    width: 100%;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-}
-
-/* textos */
-h1, label {
-    color: white;
-    font-weight: bold;
-}
-
-h1 {
-    text-align: center;
-}
-
-/* iconos */
-.icon {
-    width: 20px;
-    vertical-align: middle;
-    margin-right: 8px;
-}
-
-/* ✅ MOBILE REAL */
-@media (max-width: 600px) {
-
-    body {
-        align-items: flex-start;
-        padding: 15px;
-        font-size: 20px;
-    }
-
-    .container {
-        max-width: 100%;
-    }
-
-    input, textarea {
-        font-size: 20px;
-        padding: 12px;
-    }
-
-    textarea {
-        height: 50vh;
-    }
-
-    button {
-        font-size: 20px;
-        padding: 14px;
-    }
-
-    h1 {
-        font-size: 24px;
-    }
-}
-
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-    <h1>Generador de repertorios</h1>
-
-    <label>
-        <img class="icon" src="https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg">
-        URL de playlist de Spotify
-    </label><br>
-
-    <input type="text" id="spotify_url"><br><br>
-
-    <button type="button" onclick="procesarPlaylist()">
-        Procesar playlist
-    </button><br><br>
-
-    <form action="/procesar/" method="post">
-
-        <textarea name="repertorio_texto" required></textarea><br><br>
-
-        <label>
-            <img class="icon" src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg">
-            Nombre del PDF de salida
-        </label><br>
-
-        <input type="text" name="nombre_salida" required><br><br>
-
-        <button type="submit">Generar PDF</button>
-    </form>
-
-</div>
-
-<script>
-async function procesarPlaylist() {
-    const url = document.getElementById("spotify_url").value;
-
-    const res = await fetch("/spotify", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({url})
-    });
-
-    const text = await res.text();
-    document.getElementsByName("repertorio_texto")[0].value = text;
-}
-</script>
-
-</body>
-</html>
-"""
-
-
-# ---------- PROCESAR PDF ----------
-
-@app.post("/procesar/")
-async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(...)):
-
-    pdf_response = requests.get(PDF_URL, timeout=30)
-    pdf_response.raise_for_status()
-
-    pdf_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    pdf_temp.write(pdf_response.content)
-    pdf_temp.close()
-
-    lista_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
-    lista_temp.write(repertorio_texto.encode("utf-8"))
-    lista_temp.close()
-
-    if not nombre_salida.endswith(".pdf"):
-        nombre_salida += ".pdf"
-
-    salida_path = os.path.join(tempfile.gettempdir(), nombre_salida)
-
-    resultado = subprocess.run(
-        [
-            "python3",
-            "extraer_repertorio.py",
-            pdf_temp.name,
-            lista_temp.name,
-            salida_path
-        ],
-        capture_output=True,
-        text=True
+def normalize_text(s):
+    s = (s or "").upper()
+    s = ''.join(
+        c for c in unicodedata.normalize('NFD', s)
+        if unicodedata.category(c) != 'Mn'
     )
-
-    # ✅ error real del script
-    if resultado.returncode != 0:
-        return f"<pre>{resultado.stderr}</pre>"
-
-    output = resultado.stdout
-
-    # ✅ detectar canciones no encontradas
-    lineas = output.split("\n")
-    errores = [l for l in lineas if "⚠️" in l]
-
-    # ✅ si hay errores → aviso + descarga AUTOMÁTICA
-    if errores:
-        errores_limpios = [l.replace("⚠️ No encontrada: ", "• ") for l in errores]
-        errores_texto = "\\n".join(errores_limpios)
-
-        return HTMLResponse(f"""
-        <html>
-        <body>
-        <script>
-            alert("⚠️ Canciones no encontradas:\\n\\n{errores_texto}");
-
-            // ✅ descargar PDF SIEMPRE
-            const link = document.createElement('a');
-            link.href = "/download/{nombre_salida}";
-            link.download = "{nombre_salida}";
-            document.body.appendChild(link);
-            link.click();
-
-            setTimeout(() => {{
-                window.location.href = "/";
-            }}, 800);
-        </script>
-        </body>
-        </html>
-        """)
-
-    # ✅ todo OK → descarga directa
-    return FileResponse(salida_path, filename=nombre_salida)
+    s = re.sub(r'[^A-Z0-9 #]', ' ', s)
+    s = re.sub(r'\s+', ' ', s).strip()
+    return s
 
 
-# ---------- DESCARGA ----------
+def limpiar_titulo_lista(s):
+    """
+    Elimina info extra en la lista:
+    - texto entre paréntesis
+    - texto después de '-'
+    """
+    s = re.sub(r'\(.*?\)', '', s)
+    s = s.split('-')[0]
+    return s.strip()
 
-@app.get("/download/{file_name}")
-async def download(file_name: str):
-    path = os.path.join(tempfile.gettempdir(), file_name)
-    return FileResponse(path, filename=file_name)
+
+def titulo_base(norm_title):
+    """
+    Elimina tonalidades:
+    F#M, C#m, Bb, BbM7, etc.
+    """
+    return re.sub(
+        r'\s+[A-G](#|B)?(M|MAJ7|M7|MIN|M|7|DIM|AUG)?$',
+        '',
+        norm_title
+    ).strip()
 
 
-# ---------- SPOTIFY ----------
+# ---------- Detección de canciones ----------
 
-@app.post("/spotify")
-async def spotify_playlist(req: Request):
+def detectar_canciones(pdf_path, size_threshold=20):
+    doc = fitz.open(pdf_path)
+    candidatos = []
 
-    data = await req.json()
-    url = data.get("url")
+    for i, page in enumerate(doc):
+        blocks = page.get_text("dict")["blocks"]
+        for b in blocks:
+            for l in b.get("lines", []):
+                spans = l.get("spans", [])
+                if not spans:
+                    continue
 
-    match = re.search(r"playlist/([a-zA-Z0-9]+)", url)
-    if not match:
-        return "URL inválida"
+                max_size = max(s.get("size", 0) for s in spans)
+                text_line = ''.join(s.get("text", '') for s in spans).strip()
 
-    playlist_id = match.group(1)
+                if len(text_line) < 3:
+                    continue
 
-    html_page = requests.get(f"https://open.spotify.com/playlist/{playlist_id}").text
+                if any(tok in text_line for tok in ['|', '||', ':', '—']) and len(text_line) < 40:
+                    continue
 
-    canciones = re.findall(r'<span.*?>(.*?)</span>', html_page)
+                if text_line.upper() == text_line and max_size >= size_threshold:
+                    norm = normalize_text(text_line)
+                    base = titulo_base(norm)
 
-    canciones_limpias = []
-    for c in canciones:
-        c = c.strip()
-        if 0 < len(c) < 80:
-            canciones_limpias.append(c)
+                    if not base:
+                        continue
 
-    texto = "\n".join(canciones_limpias[:100])
+                    if any(k in base for k in [
+                        "INTRO", "ESTROFA", "BILLO", "ESTRIBILLO",
+                        "POSTCORO", "PUENTE", "SOLO", "OUTRO"
+                    ]):
+                        continue
 
-    texto = limpiar_playlist(texto)
-    texto = normalizar_saltos(texto)
-    texto = convertir_a_lista(texto)
+                    candidatos.append((text_line.strip(), base, i))
 
-    return PlainTextResponse(texto)
+    canciones = []
+    for idx, (titulo, base, inicio) in enumerate(candidatos):
+        fin = candidatos[idx + 1][2] - 1 if idx + 1 < len(candidatos) else len(doc) - 1
+        canciones.append((titulo, base, inicio, fin))
+
+    return canciones
+
+
+# ---------- Extracción ----------
+
+def extraer(pdf_path, lista_path, salida_path):
+    reader = PdfReader(pdf_path)
+    writer = PdfWriter()
+
+    canciones = detectar_canciones(pdf_path)
+    if not canciones:
+        print("Error: no se detectaron títulos.")
+        return
+
+    print(f"Detectadas {len(canciones)} canciones.\n")
+
+    with open(lista_path, "r", encoding="utf-8") as f:
+        deseadas_raw = [l.strip() for l in f if l.strip()]
+
+    deseadas = [
+        normalize_text(limpiar_titulo_lista(x))
+        for x in deseadas_raw
+    ]
+
+    for original, buscado in zip(deseadas_raw, deseadas):
+        coincidencias = [
+            (titulo, ini, fin)
+            for titulo, base, ini, fin in canciones
+            if base == buscado
+        ]
+
+        if coincidencias:
+            print(f"✓ {original} → {len(coincidencias)} versión(es)")
+            for titulo, ini, fin in coincidencias:
+                print(f"   - {titulo} (páginas {ini + 1}-{fin + 1})")
+                for p in range(ini, fin + 1):
+                    writer.add_page(reader.pages[p])
+        else:
+            print(f"⚠️ No encontrada: {original}")
+
+    with open(salida_path, "wb") as f:
+        writer.write(f)
+
+    print(f"\nPDF generado: {salida_path}")
+
+
+# ---------- Main ----------
+
+if __name__ == "__main__":
+    if len(sys.argv) != 4:
+        print("Uso: python3 extraer_repertorio.py <PDF> <lista.txt> <salida.pdf>")
+        sys.exit(1)
+
+    extraer(sys.argv[1], sys.argv[2], sys.argv[3])
