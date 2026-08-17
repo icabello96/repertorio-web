@@ -24,12 +24,22 @@ def limpiar_playlist(texto):
     for l in lineas:
         if not l:
             continue
+
         if re.search(r"\d[\d,]*\s+saves", l, re.IGNORECASE):
             continue
+
         if re.search(r"\b\d+\s?(hr|min)\b", l, re.IGNORECASE):
             continue
-        if l.lower() in ["search", "your library", "premium", "home", "created with spotlistr - www.spotlistr.com"]:
+
+        if l.lower() in [
+            "search",
+            "your library",
+            "premium",
+            "home",
+            "created with spotlistr - www.spotlistr.com"
+        ]:
             continue
+
         lineas_limpias.append(l)
 
     return "\n\n".join(lineas_limpias)
@@ -73,7 +83,7 @@ body {
     position: relative;
 }
 
-/* ✅ fondo + overlay compatible iPhone */
+/* fondo + overlay compatible iPhone */
 body::before {
     content: "";
     position: fixed;
@@ -138,7 +148,7 @@ h1 {
     margin-right: 8px;
 }
 
-/* ✅ MOBILE REAL */
+/* móvil */
 @media (max-width: 600px) {
 
     body {
@@ -207,18 +217,42 @@ h1 {
 </div>
 
 <script>
+
 async function procesarPlaylist() {
+
     const url = document.getElementById("spotify_url").value;
 
     const res = await fetch("/spotify", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({url})
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            url: url
+        })
     });
 
-    const text = await res.text();
-    document.getElementsByName("repertorio_texto")[0].value = text;
+    if (!res.ok) {
+
+        const text = await res.text();
+
+        alert(text);
+
+        return;
+    }
+
+    const data = await res.json();
+
+    // Introducir las canciones en el repertorio
+    document.getElementsByName("repertorio_texto")[0].value =
+        data.canciones;
+
+    // Introducir automáticamente el título de Spotify
+    // como nombre del PDF
+    document.getElementsByName("nombre_salida")[0].value =
+        data.titulo;
 }
+
 </script>
 
 </body>
@@ -229,23 +263,44 @@ async function procesarPlaylist() {
 # ---------- PROCESAR PDF ----------
 
 @app.post("/procesar/")
-async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(...)):
+async def procesar(
+    repertorio_texto: str = Form(...),
+    nombre_salida: str = Form(...)
+):
 
-    pdf_response = requests.get(PDF_URL, timeout=30)
+    pdf_response = requests.get(
+        PDF_URL,
+        timeout=30
+    )
+
     pdf_response.raise_for_status()
 
-    pdf_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    pdf_temp = tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=".pdf"
+    )
+
     pdf_temp.write(pdf_response.content)
     pdf_temp.close()
 
-    lista_temp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt")
-    lista_temp.write(repertorio_texto.encode("utf-8"))
+    lista_temp = tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=".txt"
+    )
+
+    lista_temp.write(
+        repertorio_texto.encode("utf-8")
+    )
+
     lista_temp.close()
 
     if not nombre_salida.endswith(".pdf"):
         nombre_salida += ".pdf"
 
-    salida_path = os.path.join(tempfile.gettempdir(), nombre_salida)
+    salida_path = os.path.join(
+        tempfile.gettempdir(),
+        nombre_salida
+    )
 
     resultado = subprocess.run(
         [
@@ -259,52 +314,90 @@ async def procesar(repertorio_texto: str = Form(...), nombre_salida: str = Form(
         text=True
     )
 
-    # ✅ error real del script
+    # error real del script
     if resultado.returncode != 0:
+
         return f"<pre>{resultado.stderr}</pre>"
 
     output = resultado.stdout
 
-    # ✅ detectar canciones no encontradas
+    # detectar canciones no encontradas
     lineas = output.split("\n")
-    errores = [l for l in lineas if "⚠️" in l]
 
-    # ✅ si hay errores → aviso + descarga AUTOMÁTICA
+    errores = [
+        l for l in lineas
+        if "⚠️" in l
+    ]
+
+    # si hay errores → aviso + descarga automática
     if errores:
-        errores_limpios = [l.replace("⚠️ No encontrada: ", "• ") for l in errores]
-        errores_texto = "\\n".join(errores_limpios)
+
+        errores_limpios = [
+            l.replace(
+                "⚠️ No encontrada: ",
+                "• "
+            )
+            for l in errores
+        ]
+
+        errores_texto = "\\n".join(
+            errores_limpios
+        )
 
         return HTMLResponse(f"""
         <html>
-        <body>
-        <script>
-            alert("⚠️ Canciones no encontradas:\\n\\n{errores_texto}");
 
-            // ✅ descargar PDF SIEMPRE
+        <body>
+
+        <script>
+
+            alert(
+                "⚠️ Canciones no encontradas:\\n\\n{errores_texto}"
+            );
+
+            // descargar PDF SIEMPRE
             const link = document.createElement('a');
-            link.href = "/download/{nombre_salida}";
-            link.download = "{nombre_salida}";
+
+            link.href = "/download/{html.escape(nombre_salida)}";
+
+            link.download = "{html.escape(nombre_salida)}";
+
             document.body.appendChild(link);
+
             link.click();
 
             setTimeout(() => {{
                 window.location.href = "/";
             }}, 800);
+
         </script>
+
         </body>
+
         </html>
         """)
 
-    # ✅ todo OK → descarga directa
-    return FileResponse(salida_path, filename=nombre_salida)
+    # todo OK → descarga directa
+    return FileResponse(
+        salida_path,
+        filename=nombre_salida
+    )
 
 
 # ---------- DESCARGA ----------
 
 @app.get("/download/{file_name}")
 async def download(file_name: str):
-    path = os.path.join(tempfile.gettempdir(), file_name)
-    return FileResponse(path, filename=file_name)
+
+    path = os.path.join(
+        tempfile.gettempdir(),
+        file_name
+    )
+
+    return FileResponse(
+        path,
+        filename=file_name
+    )
 
 
 # ---------- SPOTIFY ----------
@@ -313,28 +406,93 @@ async def download(file_name: str):
 async def spotify_playlist(req: Request):
 
     data = await req.json()
+
     url = data.get("url")
 
-    match = re.search(r"playlist/([a-zA-Z0-9]+)", url)
+    match = re.search(
+        r"playlist/([a-zA-Z0-9]+)",
+        url or ""
+    )
+
     if not match:
-        return "URL inválida"
+
+        return PlainTextResponse(
+            "URL inválida",
+            status_code=400
+        )
 
     playlist_id = match.group(1)
 
-    html_page = requests.get(f"https://open.spotify.com/playlist/{playlist_id}").text
+    # --------------------------------------------------------
+    # DESCARGAR PÁGINA DE SPOTIFY
+    # --------------------------------------------------------
 
-    canciones = re.findall(r'<span.*?>(.*?)</span>', html_page)
+    response = requests.get(
+        f"https://open.spotify.com/playlist/{playlist_id}",
+        timeout=30
+    )
+
+    if response.status_code != 200:
+
+        return PlainTextResponse(
+            "No se pudo acceder a la playlist de Spotify.",
+            status_code=400
+        )
+
+    html_page = response.text
+
+    # --------------------------------------------------------
+    # EXTRAER TÍTULO DE LA PLAYLIST
+    # --------------------------------------------------------
+
+    titulo = ""
+
+    match_titulo = re.search(
+        r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\'](.*?)["\']',
+        html_page,
+        re.IGNORECASE
+    )
+
+    if match_titulo:
+
+        titulo = html.unescape(
+            match_titulo.group(1)
+        ).strip()
+
+    # --------------------------------------------------------
+    # EXTRAER CANCIONES
+    # --------------------------------------------------------
+
+    canciones = re.findall(
+        r'<span.*?>(.*?)</span>',
+        html_page
+    )
 
     canciones_limpias = []
+
     for c in canciones:
+
         c = c.strip()
+
         if 0 < len(c) < 80:
+
             canciones_limpias.append(c)
 
-    texto = "\n".join(canciones_limpias[:100])
+    texto = "\n".join(
+        canciones_limpias[:100]
+    )
 
     texto = limpiar_playlist(texto)
+
     texto = normalizar_saltos(texto)
+
     texto = convertir_a_lista(texto)
 
-    return PlainTextResponse(texto)
+    # --------------------------------------------------------
+    # DEVOLVER TÍTULO + CANCIONES
+    # --------------------------------------------------------
+
+    return {
+        "titulo": titulo,
+        "canciones": texto
+    }
